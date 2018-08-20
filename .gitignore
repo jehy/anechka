@@ -1,0 +1,6 @@
+.idea
+node_modules
+config/config.json
+config/credentials.json
+config/token.json
+.nyc_output
