@@ -70,7 +70,7 @@ async function updateTimeTables() {
     }
     catch (err) {
       debug(`The API returned an error for timetable ${JSON.stringify(timetable)}: ${err}`);
-      setTimeout(() => process.exit(1), 1000);
+      throw err;
     }
     if (rows && rows.length) {
       const cols = transpose(rows);
@@ -118,7 +118,7 @@ async function updateUsers() {
     }
     catch (err) {
       debug(`The API returned an error for timetable ${JSON.stringify(timetable)}: ${err}`);
-      setTimeout(() => process.exit(1), 1000);
+      throw err;
     }
     if (rows && rows.length) {
       for (let i = 0; i < rows.length; i++) {
