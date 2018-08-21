@@ -16,7 +16,8 @@
     "debug": "^3.1.0",
     "fs-extra": "^7.0.0",
     "googleapis": "^27.0.0",
-    "moment": "^2.22.2"
+    "moment": "^2.22.2",
+    "slack": "^11.0.1"
   },
   "devDependencies": {
     "eslint": "^5.4.0",
