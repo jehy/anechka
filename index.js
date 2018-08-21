@@ -149,13 +149,30 @@ async function updateSlackUsers() {
 }
 
 async function updateSlackUserName(options) {
-  const {group, devIndex, devName} = options;
-  const channelData = await slackBot.groups.info({channel: group});
-  if (!channelData.ok) {
-    debug(`updateSlackUserName error, smth not okay: ${channelData}`);
-    return false;
+  const {
+    group,
+    channel,
+    devIndex,
+    devName,
+  } = options;
+  let topic;
+  if (group)
+  {
+    const channelData = await slackBot.groups.info({channel: group});
+    if (!channelData.ok) {
+      debug(`updateSlackUserName error, smth not okay: ${channelData}`);
+      return false;
+    }
+    topic = channelData.group.topic.value;
   }
-  const topic = channelData.group.topic.value;
+  else {
+    const channelData = await slackBot.channels.info({channel});
+    if (!channelData.ok) {
+      debug(`updateSlackUserName error, smth not okay: ${channelData}`);
+      return false;
+    }
+    topic = channelData.channel.topic.value;
+  }
   debug(`Current topic: ${topic}`);
   const findUsers = /<@[A-Z0-9]+>/g;
   const foundUsers = topic.match(findUsers);
@@ -179,10 +196,21 @@ async function updateSlackUserName(options) {
     return true;
   }
   debug(`Setting topic ${newTopic}`);
-  const response = await slackBot.groups.setTopic({
-    channel: group,
-    topic: newTopic,
-  });
+  let response;
+  if (group)
+  {
+    response = await slackBot.groups.setTopic({
+      channel: group,
+      topic: newTopic,
+    });
+  }
+  else
+  {
+    response = await slackBot.channels.setTopic({
+      channel: group,
+      topic: newTopic,
+    });
+  }
   return response && response.ok === true;
 }
 
@@ -217,6 +245,7 @@ async function updateSlack() {
         const currentDevSlackName = users[currentDevName];
         const options = {
           group: timetable.group,
+          channel: timetable.channel,
           devIndex: timetable.devIndex || 0,
           devName: currentDevSlackName,
         };
@@ -228,7 +257,7 @@ async function updateSlack() {
         return false;
       }
       catch (err) {
-        debug(`Failed to set current dev for channel ${timetable.group}: ${err}`);
+        debug(`Failed to set current dev for channel ${timetable.group}${timetable.channel}: ${err}`);
       }
       debug('Updated.');
     }
