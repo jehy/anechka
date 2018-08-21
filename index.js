@@ -228,7 +228,7 @@ async function updateSlack() {
         return false;
       }
       catch (err) {
-        debug(`Failed to find current dev: ${err}`);
+        debug(`Failed to set current dev for channel ${timetable.group}: ${err}`);
       }
       debug('Updated.');
     }
