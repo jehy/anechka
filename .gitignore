@@ -1,6 +1,7 @@
 .idea
 node_modules
 config/config.json
+config/runtime.json
 config/credentials.json
 config/token.json
 .nyc_output

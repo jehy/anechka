@@ -1,90 +1,91 @@
-const fs = require('fs');
-const readline = require('readline');
-const {google} = require('googleapis');
-const moment= require('moment');
+'use strict';
 
-// If modifying these scopes, delete token.json.
-const SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
-const TOKEN_PATH = 'config/token.json';
+const {google} = require('googleapis');
+const moment = require('moment');
+const config = require('config');
+const debug = require('debug')('devDuty:server');
+const Promise = require('bluebird');
+
 
 // Load client secrets from a local file.
-fs.readFile('config/credentials.json', (err, content) => {
-  if (err) return console.log('Error loading client secret file:', err);
-  // Authorize a client with credentials, then call the Google Sheets API.
-  authorize(JSON.parse(content), listMajors);
+const credentials = require('./config/credentials.json');
+const token = require('./config/token.json');
+
+
+debug.enabled = true;
+
+// eslint-disable-next-line camelcase
+const {client_secret, client_id, redirect_uris} = credentials.installed;
+const oAuth2Client = new google.auth.OAuth2(
+  client_id, client_secret, redirect_uris[0],
+);
+oAuth2Client.setCredentials(token);
+
+const sheets = google.sheets({
+  version: 'v4',
+  auth: oAuth2Client,
 });
+const getSpreadSheet = Promise.promisify(sheets.spreadsheets.values.get, {context: sheets});
 
-/**
- * Create an OAuth2 client with the given credentials, and then execute the
- * given callback function.
- * @param {Object} credentials The authorization client credentials.
- * @param {function} callback The callback to call with the authorized client.
- */
-function authorize(credentials, callback) {
-  const {client_secret, client_id, redirect_uris} = credentials.installed;
-  const oAuth2Client = new google.auth.OAuth2(
-    client_id, client_secret, redirect_uris[0]);
-
-  // Check if we have previously stored a token.
-  fs.readFile(TOKEN_PATH, (err, token) => {
-    if (err) return getNewToken(oAuth2Client, callback);
-    oAuth2Client.setCredentials(JSON.parse(token));
-    callback(oAuth2Client);
-  });
+function transpose(a) {
+  return Object.keys(a[0]).map(c => a.map(r => r[c]));
 }
 
-/**
- * Get and store new token after prompting for user authorization, and then
- * execute the given callback with the authorized OAuth2 client.
- * @param {google.auth.OAuth2} oAuth2Client The OAuth2 client to get token for.
- * @param {getEventsCallback} callback The callback for the authorized client.
- */
-function getNewToken(oAuth2Client, callback) {
-  const authUrl = oAuth2Client.generateAuthUrl({
-    access_type: 'offline',
-    scope: SCOPES,
-  });
-  console.log('Authorize this app by visiting this url:', authUrl);
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-  rl.question('Enter the code from that page here: ', (code) => {
-    rl.close();
-    oAuth2Client.getToken(code, (err, token) => {
-      if (err) return console.error('Error while trying to retrieve access token', err);
-      oAuth2Client.setCredentials(token);
-      // Store the token to disk for later program executions
-      fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
-        if (err) console.error(err);
-        console.log('Token stored to', TOKEN_PATH);
-      });
-      callback(oAuth2Client);
+function timeTableHash(timetable)
+{
+  return `${timetable.spreadsheetId}${timetable.prefix}`;
+}
+const timeTableCache = {};
+
+async function updateTimeTables() {
+  const year = moment().format('Y');
+  const uniqueTimeTables = config.timetables
+    .map((timetable) => {
+      return Object.assign({}, timetable, {hash: timeTableHash(timetable)});
+    })
+    .filter((el, index, arr) => {
+      return arr.findIndex(item => item.hash === el.hash) === index;
     });
-  });
+  Promise.map(uniqueTimeTables, async (timetable) => {
+    const {prefix, spreadsheetId} = timetable;
+    const {hash} = timetable;
+    if (!timeTableCache[hash]) {
+      timeTableCache[hash] = {};
+    }
+    let rows;
+    try {
+      const res = await getSpreadSheet({
+        spreadsheetId,
+        range: `timetable_${prefix}${year}!A1:Z33`,
+      });
+      rows = res.data.values;
+    }
+    catch (err) {
+      debug(`The API returned an error for timetable ${JSON.stringify(timetable)}: ${err}`);
+      setTimeout(() => process.exit(1), 1000);
+    }
+    if (rows && rows.length) {
+      const cols = transpose(rows);
+      for (let month = 0; month < 12 && cols[month * 2] && cols[month * 2][0]; month++) {
+        const realMonth = cols[month * 2][0];
+        debug(`Found month ${realMonth}`);
+        const dateColumn = cols[month * 2].slice(2);
+        const devColumn = cols[month * 2 + 1].slice(2);
+        dateColumn.forEach((row, index) => {
+          if (!row || !devColumn[index]) {
+            return;
+          }
+          debug(`${row}: ${devColumn[index]}`);
+          timeTableCache[hash][year] = timeTableCache[hash][year] || {};
+          timeTableCache[hash][year][realMonth] = timeTableCache[hash][year][realMonth] || {};
+          timeTableCache[hash][year][realMonth][row] = devColumn[index];
+        });
+      }
+      debug('Cached timetable: ', `${JSON.stringify(timeTableCache, null, 3)}`);
+    } else {
+      debug('No data found.');
+    }
+  }, {concurrency: 2});
 }
 
-/**
- * Prints the names and majors of students in a sample spreadsheet:
- * @see https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
- * @param {google.auth.OAuth2} auth The authenticated Google OAuth client.
- */
-function listMajors(auth) {
-  const sheets = google.sheets({version: 'v4', auth});
-  sheets.spreadsheets.values.get({
-    spreadsheetId: '1g1rbACDbFD-w8wwHeylSdiWrT5Vh47_JWT90Oh5-6CY',
-    range: `timetable_${moment().format('Y')}!A1:Z33`,
-  }, (err, res) => {
-    if (err) return console.log('The API returned an error: ' + err);
-    const rows = res.data.values;
-    if (rows.length) {
-      console.log('Name, Major:');
-      // Print columns A and E, which correspond to indices 0 and 4.
-      rows.forEach((row) => {
-        console.log(`${row[0]}`);
-      });
-    } else {
-      console.log('No data found.');
-    }
-  });
-}
+updateTimeTables();
