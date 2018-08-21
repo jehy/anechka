@@ -31,11 +31,16 @@ function transpose(a) {
   return Object.keys(a[0]).map(c => a.map(r => r[c]));
 }
 
-function timeTableHash(timetable)
-{
+function timeTableHash(timetable) {
   return `${timetable.spreadsheetId}${timetable.prefix}`;
 }
+
+function usertimeTableHash(timetable) {
+  return `${timetable.spreadsheetId}`;
+}
+
 const timeTableCache = {};
+const userCache = {};
 
 async function updateTimeTables() {
   const year = moment().format('Y');
@@ -88,4 +93,46 @@ async function updateTimeTables() {
   }, {concurrency: 2});
 }
 
+async function updateUsers() {
+  const uniqueTimeTables = config.timetables
+    .map((timetable) => {
+      return Object.assign({}, timetable, {hash: usertimeTableHash(timetable)});
+    })
+    .filter((el, index, arr) => {
+      return arr.findIndex(item => item.hash === el.hash) === index;
+    });
+  Promise.map(uniqueTimeTables, async (timetable) => {
+    const {spreadsheetId} = timetable;
+    const {hash} = timetable;
+    if (!userCache[hash]) {
+      userCache[hash] = {};
+    }
+    let rows;
+    try {
+      const res = await getSpreadSheet({
+        spreadsheetId,
+        range: 'users!A1:V40',
+      });
+      rows = res.data.values;
+    }
+    catch (err) {
+      debug(`The API returned an error for timetable ${JSON.stringify(timetable)}: ${err}`);
+      setTimeout(() => process.exit(1), 1000);
+    }
+    if (rows && rows.length) {
+      for (let i = 0; i < rows.length; i++) {
+        const [user, slackName] = rows[i];
+        if (!user || !slackName) {
+          break;
+        }
+        userCache[hash][user] = slackName;
+      }
+      debug('Cached users: ', `${JSON.stringify(userCache, null, 3)}`);
+    } else {
+      debug('No data found.');
+    }
+  }, {concurrency: 2});
+}
+
 updateTimeTables();
+updateUsers();
