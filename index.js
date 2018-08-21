@@ -240,9 +240,38 @@ async function updateSlack() {
     }
     if (!lastUpdate || moment().isAfter(updateTime) && updateTime.isAfter(lastUpdate)) {
       debug('Need update!');
+
+      let timetableNotFound = false;
+      if (!calendar[year])
+      {
+        debug(`There is no timetable for year ${year}!`);
+        timetableNotFound = true;
+      }
+      else if (!calendar[year][month])
+      {
+        debug(`There is no timetable for month ${month}!`);
+        timetableNotFound = true;
+      }
+      else if (!calendar[year][month][day])
+      {
+        debug(`There is no timetable for day ${day}!`);
+        timetableNotFound = true;
+      }
+      if (timetableNotFound)
+      {
+        timetable.lastUpdate = moment();
+        return true;
+      }
+      const currentDevName = calendar[year][month][day];
+
+      const currentDevSlackName = users[currentDevName];
+      if (!currentDevSlackName)
+      {
+        debug(`User not found for name ${currentDevName}`);
+        timetable.lastUpdate = moment();
+        return true;
+      }
       try {
-        const currentDevName = calendar[year][month][day];
-        const currentDevSlackName = users[currentDevName];
         const options = {
           group: timetable.group,
           channel: timetable.channel,
