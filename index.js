@@ -207,7 +207,7 @@ async function updateSlackUserName(options) {
   else
   {
     response = await slackBot.channels.setTopic({
-      channel: group,
+      channel,
       topic: newTopic,
     });
   }
