@@ -1,0 +1,9 @@
+{
+  "apps": [
+    {
+      "name": "dev-duty",
+      "script": "npm",
+      "args": "start"
+    }
+  ]
+}
