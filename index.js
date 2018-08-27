@@ -6,6 +6,7 @@ const config = require('config');
 const debug = require('debug')('devDuty:server');
 const Promise = require('bluebird');
 const Slack = require('slack');
+const fs = require('fs-extra');
 
 
 // Load client secrets from a local file.
@@ -72,25 +73,27 @@ async function updateTimeTables() {
       debug(`The API returned an error for timetable ${JSON.stringify(timetable)}: ${err}`);
       throw err;
     }
-    if (rows && rows.length) {
-      const cols = transpose(rows);
-      for (let month = 0; month < 12 && cols[month * 2] && cols[month * 2][0]; month++) {
-        const realMonth = cols[month * 2][0];
-        const dateColumn = cols[month * 2].slice(2);
-        const devColumn = cols[month * 2 + 1].slice(2);
-        dateColumn.forEach((row, index) => {
-          if (!row || !devColumn[index]) {
-            return;
-          }
-          timeTableCache[hash][year] = timeTableCache[hash][year] || {};
-          timeTableCache[hash][year][realMonth] = timeTableCache[hash][year][realMonth] || {};
-          timeTableCache[hash][year][realMonth][row] = devColumn[index];
-        });
-      }
-      debug('Cached timetable: ', `${JSON.stringify(timeTableCache, null, 3)}`);
-    } else {
+    if (!rows || !rows.length) {
       debug('No data found.');
+      return false;
     }
+    const cols = transpose(rows);
+    for (let month = 0; month < 12 && cols[month * 2] && cols[month * 2][0]; month++) {
+      const realMonth = cols[month * 2][0];
+      const dateColumn = cols[month * 2].slice(2);
+      const devColumn = cols[month * 2 + 1].slice(2);
+      dateColumn.forEach((row, index) => {
+        if (!row || !devColumn[index]) {
+          return;
+        }
+        timeTableCache[hash][year] = timeTableCache[hash][year] || {};
+        timeTableCache[hash][year][realMonth] = timeTableCache[hash][year][realMonth] || {};
+        timeTableCache[hash][year][realMonth][row] = devColumn[index];
+      });
+    }
+    // debug('Cached timetable: ', `${JSON.stringify(timeTableCache, null, 3)}`);
+    return fs.writeJson('./current/timetable.json', {spaces: 3});
+
   }, {concurrency: 2});
 }
 
@@ -120,18 +123,19 @@ async function updateUsers() {
       debug(`The API returned an error for timetable ${JSON.stringify(timetable)}: ${err}`);
       throw err;
     }
-    if (rows && rows.length) {
-      for (let i = 0; i < rows.length; i++) {
-        const [user, slackName] = rows[i];
-        if (!user || !slackName) {
-          break;
-        }
-        userCache[hash][user] = slackName;
-      }
-      debug('Cached users: ', `${JSON.stringify(userCache, null, 3)}`);
-    } else {
+    if (!rows || !rows.length) {
       debug('No data found.');
+      return false;
     }
+    for (let i = 0; i < rows.length; i++) {
+      const [user, slackName] = rows[i];
+      if (!user || !slackName) {
+        break;
+      }
+      userCache[hash][user] = slackName;
+    }
+    // debug('Cached users: ', `${JSON.stringify(userCache, null, 3)}`);
+    return fs.writeJson('./current/users.json', {spaces: 3});
   }, {concurrency: 2});
 }
 
@@ -144,8 +148,8 @@ async function updateSlackUsers() {
   users.members.forEach((user) => {
     slackUserCache[user.name] = user.id;
   });
-  debug(`SlackUserCache: ${JSON.stringify(slackUserCache, null, 3)}`);
-  return true;
+  // debug(`SlackUserCache: ${JSON.stringify(slackUserCache, null, 3)}`);
+  return fs.writeJson('./current/slackUsers.json', {spaces: 3});
 }
 
 async function updateSlackUserName(options) {
