@@ -47,6 +47,10 @@ const userCache = {};
 const slackUserCache = {};
 
 async function updateTimeTables() {
+  if (timeTableCache.lastUpdate && timeTableCache.lastUpdate.isAfter(moment().subtract('30', 'minutes')))
+  {
+    return true;
+  }
   const year = moment().format('Y');
   const uniqueTimeTables = config.timetables
     .map((timetable) => {
@@ -55,7 +59,7 @@ async function updateTimeTables() {
     .filter((el, index, arr) => {
       return arr.findIndex(item => item.hash === el.hash) === index;
     });
-  return Promise.map(uniqueTimeTables, async (timetable) => {
+  const success = await Promise.map(uniqueTimeTables, async (timetable) => {
     const {prefix, spreadsheetId} = timetable;
     const {hash} = timetable;
     if (!timeTableCache[hash]) {
@@ -95,9 +99,18 @@ async function updateTimeTables() {
     return fs.writeJson('./current/timetable.json', {spaces: 3});
 
   }, {concurrency: 2});
+  if (success)
+  {
+    timeTableCache.lastUpdate = moment();
+  }
+  return success;
 }
 
 async function updateUsers() {
+  if (userCache.lastUpdate && userCache.lastUpdate.isAfter(moment().subtract('30', 'minutes')))
+  {
+    return true;
+  }
   const uniqueTimeTables = config.timetables
     .map((timetable) => {
       return Object.assign({}, timetable, {hash: usertimeTableHash(timetable)});
@@ -105,7 +118,7 @@ async function updateUsers() {
     .filter((el, index, arr) => {
       return arr.findIndex(item => item.hash === el.hash) === index;
     });
-  return Promise.map(uniqueTimeTables, async (timetable) => {
+  const success = await Promise.map(uniqueTimeTables, async (timetable) => {
     const {spreadsheetId} = timetable;
     const {hash} = timetable;
     if (!userCache[hash]) {
@@ -137,9 +150,19 @@ async function updateUsers() {
     // debug('Cached users: ', `${JSON.stringify(userCache, null, 3)}`);
     return fs.writeJson('./current/users.json', {spaces: 3});
   }, {concurrency: 2});
+
+  if (success)
+  {
+    userCache.lastUpdate = moment();
+  }
+  return success;
 }
 
 async function updateSlackUsers() {
+  if (slackUserCache.lastUpdate && slackUserCache.lastUpdate.isAfter(moment().subtract('1', 'hour')))
+  {
+    return true;
+  }
   const users = await slackBot.users.list();
   if (!users.ok) {
     debug(`updateSlackUsers error, smth not okay: ${users}`);
@@ -149,7 +172,9 @@ async function updateSlackUsers() {
     slackUserCache[user.name] = user.id;
   });
   // debug(`SlackUserCache: ${JSON.stringify(slackUserCache, null, 3)}`);
-  return fs.writeJson('./current/slackUsers.json', {spaces: 3});
+  await fs.writeJson('./current/slackUsers.json', {spaces: 3});
+  slackUserCache.lastUpdate = moment();
+  return true;
 }
 
 async function updateSlackUserName(options) {
@@ -234,7 +259,8 @@ async function updateSlack() {
       return false;
     }
     const updateTime = moment(moment().format(`YYYY-MM-DD ${timetable.updateTime}`), 'YYYY-MM-DD HH:mm:ss');
-    debug(`Update time: ${updateTime.format('YYYY-MM-DD HH:mm:ss')}`);
+    debug(`Update  time: ${updateTime.format('YYYY-MM-DD HH:mm:ss')}`);
+    debug(`Current time: ${moment().format('YYYY-MM-DD HH:mm:ss')}`);
     const {lastUpdate} = timetable;
     if (lastUpdate) {
       debug(`lastUpdate: ${lastUpdate.format('YYYY-MM-DD HH:mm:ss')}`);
@@ -242,64 +268,65 @@ async function updateSlack() {
     else {
       debug('lastUpdate: none');
     }
-    if (!lastUpdate || moment().isAfter(updateTime) && updateTime.isAfter(lastUpdate)) {
-      debug('Need update!');
-
-      let timetableNotFound = false;
-      if (!calendar[year])
-      {
-        debug(`There is no timetable for year ${year}!`);
-        timetableNotFound = true;
-      }
-      else if (!calendar[year][month])
-      {
-        debug(`There is no timetable for month ${month}!`);
-        timetableNotFound = true;
-      }
-      else if (!calendar[year][month][day])
-      {
-        debug(`There is no timetable for day ${day}!`);
-        timetableNotFound = true;
-      }
-      if (timetableNotFound)
-      {
-        timetable.lastUpdate = moment();
-        return true;
-      }
-      const currentDevName = calendar[year][month][day];
-
-      const currentDevSlackName = users[currentDevName];
-      if (!currentDevSlackName)
-      {
-        debug(`User not found for name ${currentDevName}`);
-        timetable.lastUpdate = moment();
-        return true;
-      }
-      try {
-        const options = {
-          group: timetable.group,
-          channel: timetable.channel,
-          devIndex: timetable.devIndex || 0,
-          devName: currentDevSlackName,
-        };
-        const res = await updateSlackUserName(options);
-        if (res) {
-          timetable.lastUpdate = moment();
-          return true;
-        }
-        return false;
-      }
-      catch (err) {
-        debug(`Failed to set current dev for channel ${timetable.group}${timetable.channel}: ${err}`);
-      }
-      debug('Updated.');
+    if (lastUpdate && moment().isBefore(updateTime) && updateTime.isBefore(lastUpdate)) {
+      debug('No need for update.');
+      return false;
     }
-    debug('No need for update.');
-    return false;
+    debug('Need update!');
+
+    let timetableNotFound = false;
+    if (!calendar[year])
+    {
+      debug(`There is no timetable for year ${year}!`);
+      timetableNotFound = true;
+    }
+    else if (!calendar[year][month])
+    {
+      debug(`There is no timetable for month ${month}!`);
+      timetableNotFound = true;
+    }
+    else if (!calendar[year][month][day])
+    {
+      debug(`There is no timetable for day ${day}!`);
+      timetableNotFound = true;
+    }
+    if (timetableNotFound)
+    {
+      timetable.lastUpdate = moment();
+      return true;
+    }
+    const currentDevName = calendar[year][month][day];
+
+    const currentDevSlackName = users[currentDevName];
+    if (!currentDevSlackName)
+    {
+      debug(`User not found for name ${currentDevName}`);
+      timetable.lastUpdate = moment();
+      return true;
+    }
+    try {
+      const options = {
+        group: timetable.group,
+        channel: timetable.channel,
+        devIndex: timetable.devIndex || 0,
+        devName: currentDevSlackName,
+      };
+      const res = await updateSlackUserName(options);
+      if (res) {
+        timetable.lastUpdate = moment();
+        return true;
+      }
+      return false;
+    }
+    catch (err) {
+      debug(`Failed to set current dev for channel ${timetable.group}${timetable.channel}: ${err}`);
+    }
+    debug('Updated.');
+    return true;
   }, {concurrency: 2});
 }
 
-const updateInterval = 1000 * 60 * 30;// every half an hour
+const updateInterval = 1000 * 60 * 5;// every 5 minutes
 // const updateInterval = 1000 * 20;// every 60 second
 async function run() {
   return Promise.all([updateTimeTables(), updateUsers(), updateSlackUsers()])
