@@ -268,7 +268,7 @@ async function updateSlack() {
     else {
       debug('lastUpdate: none');
     }
-    if (lastUpdate && moment().isBefore(updateTime) && updateTime.isBefore(lastUpdate)) {
+    if (lastUpdate && updateTime.isBefore(lastUpdate)) {
       debug('No need for update.');
       return false;
     }
@@ -314,9 +314,8 @@ async function updateSlack() {
       const res = await updateSlackUserName(options);
       if (res) {
         timetable.lastUpdate = moment();
-        return true;
       }
-      return false;
+      return res;
     }
     catch (err) {
       debug(`Failed to set current dev for channel ${timetable.group}${timetable.channel}: ${err}`);
