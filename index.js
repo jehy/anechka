@@ -3,19 +3,20 @@
 const {google} = require('googleapis');
 const moment = require('moment');
 const config = require('config');
-const debug = require('debug')('devDuty:server');
+const Debug = require('debug');
 const Promise = require('bluebird');
 const Slack = require('slack');
 const fs = require('fs-extra');
 
 
+const gobalDebug = Debug('devDuty:server');
 // Load client secrets from a local file.
 const credentials = require('./config/credentials.json');
 const token = require('./config/token.json');
 
 const slackBot = new Slack({token: config.token});
 
-debug.enabled = true;
+gobalDebug.enabled = true;
 
 // eslint-disable-next-line camelcase
 const {client_secret, client_id, redirect_uris} = credentials.installed;
@@ -60,8 +61,14 @@ async function updateTimeTables() {
       return arr.findIndex(item => item.hash === el.hash) === index;
     });
   const success = await Promise.map(uniqueTimeTables, async (timetable) => {
-    const {prefix, spreadsheetId} = timetable;
-    const {hash} = timetable;
+    const {
+      hash,
+      name,
+      prefix,
+      spreadsheetId,
+    } = timetable;
+    const localDebug = Debug(`devDuty:server:${name}`);
+    localDebug.enabled = true;
     if (!timeTableCache[hash]) {
       timeTableCache[hash] = {};
     }
@@ -74,11 +81,11 @@ async function updateTimeTables() {
       rows = res.data.values;
     }
     catch (err) {
-      debug(`The API returned an error for timetable ${JSON.stringify(timetable)}: ${err}`);
+      localDebug(`The API returned an error for timetable ${JSON.stringify(timetable)}: ${err}`);
       throw err;
     }
     if (!rows || !rows.length) {
-      debug('No data found.');
+      localDebug('No data found.');
       return false;
     }
     const cols = transpose(rows);
@@ -96,7 +103,7 @@ async function updateTimeTables() {
       });
     }
     // debug('Cached timetable: ', `${JSON.stringify(timeTableCache, null, 3)}`);
-    return fs.writeJson('./current/timetable.json', {spaces: 3});
+    return fs.writeJson('./current/timetable.json', timeTableCache, {spaces: 3});
 
   }, {concurrency: 2});
   if (success)
@@ -119,8 +126,13 @@ async function updateUsers() {
       return arr.findIndex(item => item.hash === el.hash) === index;
     });
   const success = await Promise.map(uniqueTimeTables, async (timetable) => {
-    const {spreadsheetId} = timetable;
-    const {hash} = timetable;
+    const {
+      hash,
+      name,
+      spreadsheetId,
+    } = timetable;
+    const localDebug = Debug(`devDuty:server:${name}`);
+    localDebug.enabled = true;
     if (!userCache[hash]) {
       userCache[hash] = {};
     }
@@ -133,11 +145,11 @@ async function updateUsers() {
       rows = res.data.values;
     }
     catch (err) {
-      debug(`The API returned an error for timetable ${JSON.stringify(timetable)}: ${err}`);
+      localDebug(`The API returned an error for timetable ${JSON.stringify(timetable)}: ${err}`);
       throw err;
     }
     if (!rows || !rows.length) {
-      debug('No data found.');
+      localDebug('No data found.');
       return false;
     }
     for (let i = 0; i < rows.length; i++) {
@@ -148,7 +160,7 @@ async function updateUsers() {
       userCache[hash][user] = slackName;
     }
     // debug('Cached users: ', `${JSON.stringify(userCache, null, 3)}`);
-    return fs.writeJson('./current/users.json', {spaces: 3});
+    return fs.writeJson('./current/users.json', userCache, {spaces: 3});
   }, {concurrency: 2});
 
   if (success)
@@ -165,31 +177,33 @@ async function updateSlackUsers() {
   }
   const users = await slackBot.users.list();
   if (!users.ok) {
-    debug(`updateSlackUsers error, smth not okay: ${users}`);
+    gobalDebug(`updateSlackUsers error, smth not okay: ${users}`);
     return false;
   }
   users.members.forEach((user) => {
     slackUserCache[user.name] = user.id;
   });
   // debug(`SlackUserCache: ${JSON.stringify(slackUserCache, null, 3)}`);
-  await fs.writeJson('./current/slackUsers.json', {spaces: 3});
+  await fs.writeJson('./current/slackUsers.json', slackUserCache, {spaces: 3});
   slackUserCache.lastUpdate = moment();
   return true;
 }
 
 async function updateSlackUserName(options) {
   const {
-    group,
-    channel,
-    devIndex,
+    timetable,
     devName,
   } = options;
+  const {group, channel, name} = timetable;
+  const localDebug = Debug(`devDuty:server:${name}`);
+  localDebug.enabled = true;
+  const devIndex = timetable.devIndex || 0;
   let topic;
   if (group)
   {
     const channelData = await slackBot.groups.info({channel: group});
     if (!channelData.ok) {
-      debug(`updateSlackUserName error, smth not okay: ${channelData}`);
+      localDebug(`updateSlackUserName error, smth not okay: ${channelData}`);
       return false;
     }
     topic = channelData.group.topic.value;
@@ -197,34 +211,34 @@ async function updateSlackUserName(options) {
   else {
     const channelData = await slackBot.channels.info({channel});
     if (!channelData.ok) {
-      debug(`updateSlackUserName error, smth not okay: ${channelData}`);
+      localDebug(`updateSlackUserName error, smth not okay: ${channelData}`);
       return false;
     }
     topic = channelData.channel.topic.value;
   }
-  debug(`Current topic: ${topic}`);
+  localDebug(`Current topic: ${topic}`);
   const findUsers = /<@[A-Z0-9]+>/g;
   const foundUsers = topic.match(findUsers);
-  debug(`Found users: ${foundUsers}`);
+  localDebug(`Found users: ${foundUsers}`);
   if (!foundUsers) {
-    debug('users not found in topic!');
+    localDebug('users not found in topic!');
     return false;
   }
   if (!foundUsers[devIndex]) {
-    debug(`users with index ${devIndex} not found in topic!`);
+    localDebug(`users with index ${devIndex} not found in topic!`);
     return false;
   }
   const devId = slackUserCache[devName];
   if (!devId) {
-    debug(`Developer ${devName} not found in cache!`);
+    localDebug(`Developer ${devName} not found in cache!`);
     return false;
   }
   const newTopic = topic.replace(foundUsers[devIndex], `<@${devId}>`);
   if (newTopic === topic) {
-    debug('current dev already set, nothing to do');
+    localDebug('current dev already set, nothing to do');
     return true;
   }
-  debug(`Setting topic ${newTopic}`);
+  localDebug(`Setting topic ${newTopic}`);
   let response;
   if (group)
   {
@@ -248,46 +262,51 @@ async function updateSlack() {
   const month = moment().format('M');
   const day = moment().format('D');
   return Promise.map((config.timetables), async (timetable) => {
+    const {name} = timetable;
+    const localDebug = Debug(`devDuty:server:${name}`);
+    localDebug.enabled = true;
     const calendar = timeTableCache[timeTableHash(timetable)];
     const users = userCache[usertimeTableHash(timetable)];
     if (!calendar) {
-      debug(`No calendar data for timetable ${JSON.stringify(timetable, null, 3)}`);
+      localDebug(`No calendar data for timetable ${JSON.stringify(timetable, null, 3)}`);
       return false;
     }
     if (!users) {
-      debug(`No calendar data for timetable ${JSON.stringify(timetable, null, 3)}`);
+      localDebug(`No calendar data for timetable ${JSON.stringify(timetable, null, 3)}`);
       return false;
     }
     const updateTime = moment(moment().format(`YYYY-MM-DD ${timetable.updateTime}`), 'YYYY-MM-DD HH:mm:ss');
-    debug(`Update  time: ${updateTime.format('YYYY-MM-DD HH:mm:ss')}`);
-    debug(`Current time: ${moment().format('YYYY-MM-DD HH:mm:ss')}`);
+    localDebug(`Update  time: ${updateTime.format('YYYY-MM-DD HH:mm:ss')}`);
+    localDebug(`Current time: ${moment().format('YYYY-MM-DD HH:mm:ss')}`);
     const {lastUpdate} = timetable;
     if (lastUpdate) {
-      debug(`lastUpdate: ${lastUpdate.format('YYYY-MM-DD HH:mm:ss')}`);
+      localDebug(`lastUpdate: ${lastUpdate.format('YYYY-MM-DD HH:mm:ss')}`);
     }
     else {
-      debug('lastUpdate: none');
+      localDebug('lastUpdate: none');
     }
-    if (lastUpdate && updateTime.isBefore(lastUpdate)) {
-      debug('No need for update.');
+    const tooEarly = moment().isBefore(updateTime);
+    const alreadyUpdated = lastUpdate && lastUpdate.isAfter(updateTime);
+    if (lastUpdate && (tooEarly || alreadyUpdated)) {
+      localDebug('No need for update.');
       return false;
     }
-    debug('Need update!');
+    localDebug('Need update!');
 
     let timetableNotFound = false;
     if (!calendar[year])
     {
-      debug(`There is no timetable for year ${year}!`);
+      localDebug(`There is no timetable for year ${year}!`);
       timetableNotFound = true;
     }
     else if (!calendar[year][month])
     {
-      debug(`There is no timetable for month ${month}!`);
+      localDebug(`There is no timetable for month ${month}!`);
       timetableNotFound = true;
     }
     else if (!calendar[year][month][day])
     {
-      debug(`There is no timetable for day ${day}!`);
+      localDebug(`There is no timetable for day ${day}!`);
       timetableNotFound = true;
     }
     if (timetableNotFound)
@@ -300,15 +319,13 @@ async function updateSlack() {
     const currentDevSlackName = users[currentDevName];
     if (!currentDevSlackName)
     {
-      debug(`User not found for name ${currentDevName}`);
+      localDebug(`User not found for name ${currentDevName}`);
       timetable.lastUpdate = moment();
       return true;
     }
     try {
       const options = {
-        group: timetable.group,
-        channel: timetable.channel,
-        devIndex: timetable.devIndex || 0,
+        timetable,
         devName: currentDevSlackName,
       };
       const res = await updateSlackUserName(options);
@@ -318,14 +335,14 @@ async function updateSlack() {
       return res;
     }
     catch (err) {
-      debug(`Failed to set current dev for channel ${timetable.group}${timetable.channel}: ${err}`);
+      localDebug(`Failed to set current dev for channel ${timetable.group}${timetable.channel}: ${err}`);
     }
-    debug('Updated.');
+    localDebug('Updated.');
     return true;
   }, {concurrency: 2});
 }
 
-const updateInterval = 1000 * 60 * 5;// every 5 minutes
+const updateInterval = 1000 * 60 * (config.updateInterval || 5);// from config or every 5 minutes
 // const updateInterval = 1000 * 20;// every 60 second
 async function run() {
   return Promise.all([updateTimeTables(), updateUsers(), updateSlackUsers()])
@@ -333,7 +350,7 @@ async function run() {
       return updateSlack();
     })
     .catch((err) => {
-      debug(`ERR: ${err}`);
+      gobalDebug(`ERR: ${err}`);
     });
 }
 

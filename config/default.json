@@ -5,15 +5,18 @@
       "prefix": "_dev",
       "updateTime": "17:54:30",
       "devIndex": 1,
-      "group": "GCC9TQ0JW"
+      "group": "GCC9TQ0JW",
+      "name": "dev update"
     },
     {
       "spreadsheetId": "yyy",
       "prefix": "_ops",
       "updateTime": "17:54:30",
       "devIndex": 0,
-      "group": "GCDETR2CX"
+      "group": "GCDETR2CX",
+      "name": "ops update"
     }
   ],
-  "token": "zzz"
+  "token": "zzz",
+  "updateInterval": 10
 }
