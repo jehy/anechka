@@ -104,8 +104,8 @@ async function updateTimeTables() {
       });
     }
     // debug('Cached timetable: ', `${JSON.stringify(timeTableCache, null, 3)}`);
-    return fs.writeJson('./current/timetable.json', timeTableCache, {spaces: 3});
-
+    await fs.writeJson('./current/timetable.json', timeTableCache, {spaces: 3});
+    return true;
   }, {concurrency: 2})
     .then(res=>res.every(el=>el));
   if (success)
@@ -164,7 +164,8 @@ async function updateUsers() {
       userCache[hash][user] = slackName;
     }
     // debug('Cached users: ', `${JSON.stringify(userCache, null, 3)}`);
-    return fs.writeJson('./current/users.json', userCache, {spaces: 3});
+    await fs.writeJson('./current/users.json', userCache, {spaces: 3});
+    return true;
   }, {concurrency: 2})
     .then(res=>res.every(el=>el));
 
