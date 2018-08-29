@@ -52,6 +52,7 @@ async function updateTimeTables() {
   {
     return true;
   }
+  gobalDebug('updating timetables');
   const year = moment().format('Y');
   const uniqueTimeTables = config.timetables
     .map((timetable) => {
@@ -110,6 +111,7 @@ async function updateTimeTables() {
   {
     timeTableCache.lastUpdate = moment();
   }
+  gobalDebug(`timetables updated: ${success}`);
   return success;
 }
 
@@ -118,6 +120,7 @@ async function updateUsers() {
   {
     return true;
   }
+  gobalDebug('updating users');
   const uniqueTimeTables = config.timetables
     .map((timetable) => {
       return Object.assign({}, timetable, {hash: usertimeTableHash(timetable)});
@@ -167,6 +170,7 @@ async function updateUsers() {
   {
     userCache.lastUpdate = moment();
   }
+  gobalDebug(`users updated: ${success}`);
   return success;
 }
 
@@ -175,6 +179,7 @@ async function updateSlackUsers() {
   {
     return true;
   }
+  gobalDebug('updating slack users');
   const users = await slackBot.users.list();
   if (!users.ok) {
     gobalDebug(`updateSlackUsers error, smth not okay: ${users}`);
@@ -186,6 +191,7 @@ async function updateSlackUsers() {
   // debug(`SlackUserCache: ${JSON.stringify(slackUserCache, null, 3)}`);
   await fs.writeJson('./current/slackUsers.json', slackUserCache, {spaces: 3});
   slackUserCache.lastUpdate = moment();
+  gobalDebug(`slack users updated: ${true}`);
   return true;
 }
 
