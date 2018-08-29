@@ -106,7 +106,8 @@ async function updateTimeTables() {
     // debug('Cached timetable: ', `${JSON.stringify(timeTableCache, null, 3)}`);
     return fs.writeJson('./current/timetable.json', timeTableCache, {spaces: 3});
 
-  }, {concurrency: 2});
+  }, {concurrency: 2})
+    .then(res=>res.every(el=>el));
   if (success)
   {
     timeTableCache.lastUpdate = moment();
@@ -164,7 +165,8 @@ async function updateUsers() {
     }
     // debug('Cached users: ', `${JSON.stringify(userCache, null, 3)}`);
     return fs.writeJson('./current/users.json', userCache, {spaces: 3});
-  }, {concurrency: 2});
+  }, {concurrency: 2})
+    .then(res=>res.every(el=>el));
 
   if (success)
   {
