@@ -2,6 +2,7 @@
 
 [![dependencies Status](https://david-dm.org/jehy/anechka/status.svg)](https://david-dm.org/jehy/anechka)
 [![devDependencies Status](https://david-dm.org/jehy/anechka/dev-status.svg)](https://david-dm.org/jehy/anechka?type=dev)
+[![Known Vulnerabilities](https://snyk.io/test/github/jehy/anechka/badge.svg)](https://snyk.io/test/github/jehy/anechka)
 
 Anechka is a bot which looks up google spreadsheets, finds someone who is on
 duty today and sets channel topic with his nick. You can have several
