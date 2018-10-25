@@ -3,12 +3,12 @@
 const {google} = require('googleapis');
 const moment = require('moment');
 const config = require('config');
-const Debug = require('debug');
 const Promise = require('bluebird');
 const fs = require('fs-extra');
+const bunyan = require('bunyan');
 
 
-const gobalDebug = Debug('anechka:sheets');
+const log = bunyan.createLogger({name: 'anechka:spreadsheets'});
 // Load client secrets from a local file.
 const credentials = require('../config/credentials.json');
 const token = require('../config/token.json');
@@ -23,8 +23,6 @@ const {
   timeTableCache,
   userCache,
 } = require('./caches');
-
-gobalDebug.enabled = true;
 
 // eslint-disable-next-line camelcase
 const {client_secret, client_id, redirect_uris} = credentials.installed;
@@ -49,8 +47,7 @@ async function updateTimetableData(timetable)
     prefix,
     spreadsheetId,
   } = timetable;
-  const localDebug = Debug(`anechka:sheets:${name}`);
-  localDebug.enabled = true;
+  const localLog = bunyan.createLogger({name: `anechka:sheets:${name}`});
   if (!timeTableCache[hash]) {
     timeTableCache[hash] = {};
   }
@@ -63,11 +60,11 @@ async function updateTimetableData(timetable)
     rows = res.data.values;
   }
   catch (err) {
-    localDebug(`The API returned an error for timetable ${JSON.stringify(timetable)}: ${err}`);
+    localLog.warn(`The API returned an error for timetable ${JSON.stringify(timetable)}: ${err}`);
     throw err;
   }
   if (!rows || !rows.length) {
-    localDebug('No data found.');
+    localLog.warn('No data found.');
     return false;
   }
   const cols = transpose(rows);
@@ -93,7 +90,7 @@ async function updateTimeTables() {
   if (timeTableCache.lastUpdate && timeTableCache.lastUpdate.isAfter(moment().subtract('30', 'minutes'))) {
     return true;
   }
-  gobalDebug('updating timetables');
+  log.info('updating timetables');
   const uniqueTimeTables = config.timetables
     .map((timetable) => {
       return Object.assign({}, timetable, {hash: timeTableHash(timetable)});
@@ -106,7 +103,7 @@ async function updateTimeTables() {
   if (success) {
     timeTableCache.lastUpdate = moment();
   }
-  gobalDebug(`timetables updated: ${success}`);
+  log.info(`timetables updated: ${success}`);
   return success;
 }
 
@@ -117,8 +114,7 @@ async function updateTimetableUsers(timetable)
     name,
     spreadsheetId,
   } = timetable;
-  const localDebug = Debug(`anechka:sheets:${name}`);
-  localDebug.enabled = true;
+  const localLog = bunyan.createLogger({name: `anechka:sheets:${name}`});
   if (!userCache[hash]) {
     userCache[hash] = {};
   }
@@ -131,11 +127,11 @@ async function updateTimetableUsers(timetable)
     rows = res.data.values;
   }
   catch (err) {
-    localDebug(`The API returned an error for timetable ${JSON.stringify(timetable)}: ${err}`);
+    localLog.warn(`The API returned an error for timetable ${JSON.stringify(timetable)}: ${err}`);
     throw err;
   }
   if (!rows || !rows.length) {
-    localDebug('No data found.');
+    localLog.warn('No data found.');
     return false;
   }
   for (let i = 0; i < rows.length; i++) {
@@ -154,7 +150,7 @@ async function updateUsers() {
   if (userCache.lastUpdate && userCache.lastUpdate.isAfter(moment().subtract('30', 'minutes'))) {
     return true;
   }
-  gobalDebug('updating users');
+  log.info('updating users');
   const uniqueTimeTables = config.timetables
     .map((timetable) => {
       return Object.assign({}, timetable, {hash: userTimeTableHash(timetable)});
@@ -167,7 +163,7 @@ async function updateUsers() {
   if (success) {
     userCache.lastUpdate = moment();
   }
-  gobalDebug(`users updated: ${success}`);
+  log.info(`users updated: ${success}`);
   return success;
 }
 

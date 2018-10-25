@@ -3,10 +3,10 @@
 const fs = require('fs-extra');
 const readline = require('readline');
 const {google} = require('googleapis');
-const debug = require('debug')('devDuty:init');
+const bunyan = require('bunyan');
 const Promise = require('bluebird');
 
-debug.enabled = true;
+const log = bunyan.createLogger({name: 'anechka:init'});
 
 // If modifying these scopes, delete token.json.
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
@@ -36,13 +36,13 @@ async function getNewToken(oAuth2Client) {
     scope: SCOPES,
   });
 
-  debug('Authorize this app by visiting this url:', authUrl);
+  log.info('Authorize this app by visiting this url:', authUrl);
   const code = await ask('Enter the code from that page here: ');
   const token = await Promise.promisify(oAuth2Client.getToken, {context: oAuth2Client})(code);
   oAuth2Client.setCredentials(token);
   // Store the token to disk for later program executions
   await fs.writeJson(TOKEN_PATH, token);
-  debug('Token stored to', TOKEN_PATH);
+  log.info('Token stored to', TOKEN_PATH);
   return oAuth2Client;
 }
 
@@ -78,11 +78,11 @@ async function init() {
     content = await fs.readJson('config/credentials.json');
   }
   catch (err) {
-    debug('Error loading client secret file:', err);
+    log.error('Error loading client secret file:', err);
     process.exit(1);
   }
   // Authorize a client with credentials, then call the Google Sheets API.
   const oAuth2Client = await authorize(content);
-  debug('auth ok');
+  log.info('auth ok');
 }
 init();
