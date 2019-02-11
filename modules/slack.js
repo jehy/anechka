@@ -193,7 +193,7 @@ async function updateSlackTimetable(timetable) {
 }
 
 async function updateSlack() {
-  return Promise.map(config.timetables, timetable=>updateSlackTimetable(timetable), {concurrency: 2});
+  return Promise.map(config.timetables, timetable=>updateSlackTimetable(timetable), {concurrency: 1});
 }
 
 module.exports = {
