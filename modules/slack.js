@@ -185,14 +185,21 @@ function getDevName(timetable) {
 
 async function updateChannelTopic(channelId, newTopic)
 {
-  const {name} = config.timetables.find(timetable=>timetable.group === channelId);
-  const localLog = bunyan.createLogger({name: `anechka:slack:${name}`});
-  const group = config.timetables.some(timetable=>timetable.group === channelId) && channelId;
-  const channel = config.timetables.some(timetable=>timetable.channel === channelId) && channelId;
-  if (!group && !channel)
-  {
-    localLog.warn(`${channelId} is neither group or channel, check config!`);
+  let name;
+  let group;
+  let channel;
+  try {
+    const found = config.timetables.find(timetable=>timetable.group === channelId || timetable.channel === channelId);
+    name = found.name;
+    group = found.group;
+    channel = found.channel;
   }
+  catch (err)
+  {
+    log.warn(`${channelId} is neither group or channel, check config!`);
+    return;
+  }
+  const localLog = bunyan.createLogger({name: `anechka:slack:${name}`});
   let response;
   if (group)
   {
