@@ -12,13 +12,14 @@ const log = bunyan.createLogger({name: 'anechka:global'});
 const updateInterval = 1000 * 60 * (config.updateInterval || 5);// from config or every 5 minutes
 // const updateInterval = 1000 * 20;// every 60 second
 async function run() {
-  return Promise.all([updateTimeTables(), updateUsers(), updateSlackUsers()])
-    .then(() => {
-      return updateSlack();
-    })
-    .catch((err) => {
-      log.error(`ERR: ${err}`);
-    });
+  try {
+    await Promise.all([updateTimeTables(), updateUsers(), updateSlackUsers()]);
+    return updateSlack();
+  } catch (err)
+  {
+    log.error(`ERR: ${err}`);
+    return false;
+  }
 }
 
 async function start() {

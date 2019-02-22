@@ -1,11 +1,13 @@
 'use strict';
 
-const timeTableCache = {};
-const userCache = {};
-const slackUserCache = {};
+const timeTables = {};
+const users = {};
+const slackUsers = {};
+const slackTopic = {};
 
 module.exports = {
-  timeTableCache,
-  userCache,
-  slackUserCache,
+  timeTables,
+  users,
+  slackUsers,
+  slackTopic,
 };

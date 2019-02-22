@@ -13,17 +13,13 @@ const {
   timeTableHash,
   userTimeTableHash,
 } = require('./utils');
-const {
-  timeTableCache,
-  userCache,
-  slackUserCache,
-} = require('./caches');
+const caches = require('./caches');
 
 
 const slackBot = new Slack({token: config.token});
 
 async function updateSlackUsers() {
-  if (slackUserCache.lastUpdate && slackUserCache.lastUpdate.isAfter(moment().subtract('1', 'hour')))
+  if (caches.slackUsers.lastUpdate && caches.slackUsers.lastUpdate.isAfter(moment().subtract('1', 'hour')))
   {
     return true;
   }
@@ -34,29 +30,45 @@ async function updateSlackUsers() {
     return false;
   }
   users.members.forEach((user) => {
-    slackUserCache[user.name] = user.id;
+    caches.slackUsers[user.name] = user.id;
   });
   // debug(`SlackUserCache: ${JSON.stringify(slackUserCache, null, 3)}`);
-  await fs.writeJson('./current/slackUsers.json', slackUserCache, {spaces: 3});
-  slackUserCache.lastUpdate = moment();
+  await fs.writeJson('./current/slackUsers.json', caches.slackUsers, {spaces: 3});
+  caches.slackUsers.lastUpdate = moment();
   log.info(`slack users updated: ${true}`);
   return true;
 }
 
-async function updateSlackUserName(options) {
-  const {
-    timetable,
-    devName,
-  } = options;
+
+/**
+ * @typedef {Object} Timetable
+ * @property {string} group slack group from config
+ * @property {string} channel slack channel from config
+ * @property {string} name timetable name from config
+ * @property {number} devIndex developer name order in slack topic
+ * @property {Date} updateTime last time of update to slack
+ *
+ */
+/**
+ *
+ * @param {string} devName developer name
+ * @param {Timetable} timetable timetable data from config
+ * @returns {Promise<boolean>}
+ */
+async function updateSlackTopicCacheData(timetable, devName) {
   const {group, channel, name} = timetable;
   const localLog = bunyan.createLogger({name: `anechka:slack:${name}`});
   const devIndex = timetable.devIndex || 0;
   let topic;
-  if (group)
+  if (caches.slackTopic && caches.slackTopic[group || channel])
+  {
+    topic = caches.slackTopic[group || channel];
+  }
+  else if (group)
   {
     const channelData = await slackBot.groups.info({channel: group});
     if (!channelData.ok) {
-      localLog.warn(`updateSlackUserName error, smth not okay: ${channelData}`);
+      localLog.warn(`updateSlackTopicCacheData error, smth not okay: ${channelData}`);
       return false;
     }
     topic = channelData.group.topic.value;
@@ -64,7 +76,7 @@ async function updateSlackUserName(options) {
   else {
     const channelData = await slackBot.channels.info({channel});
     if (!channelData.ok) {
-      localLog.warn(`updateSlackUserName error, smth not okay: ${channelData}`);
+      localLog.warn(`updateSlackTopicCacheData error, smth not okay: ${channelData}`);
       return false;
     }
     topic = channelData.channel.topic.value;
@@ -78,10 +90,10 @@ async function updateSlackUserName(options) {
     return false;
   }
   if (!foundUsers[devIndex]) {
-    localLog.warn(`users with index ${devIndex} not found in topic!`);
+    localLog.warn(`user with index ${devIndex} not found in topic!`);
     return false;
   }
-  const devId = slackUserCache[devName];
+  const devId = caches.slackUsers[devName];
   if (!devId) {
     localLog.warn(`Developer ${devName} not found in cache!`);
     return false;
@@ -91,7 +103,96 @@ async function updateSlackUserName(options) {
     localLog.info('current dev already set, nothing to do');
     return true;
   }
-  localLog.info(`Setting topic ${newTopic}`);
+  localLog.info(`Setting topic in cache to ${newTopic}`);
+  caches.slackTopic[group || channel] = newTopic;
+  await fs.writeJson('./current/slackTopic.json', caches.slackTopic, {spaces: 3});
+  return true;
+}
+
+
+/**
+ *
+ * @param {Timetable} timetable
+ * @returns {boolean}
+ */
+
+function shouldUpdate(timetable) {
+  const {name, lastUpdate} = timetable;
+  const localLog = bunyan.createLogger({name: `anechka:slack:${name}`});
+  const updateTime = moment(moment().format(`YYYY-MM-DD ${timetable.updateTime}`), 'YYYY-MM-DD HH:mm:ss');
+  localLog.info(`Update  time: ${updateTime.format('YYYY-MM-DD HH:mm:ss')}`);
+  localLog.info(`Current time: ${moment().format('YYYY-MM-DD HH:mm:ss')}`);
+  if (lastUpdate) {
+    localLog.info(`lastUpdate: ${lastUpdate.format('YYYY-MM-DD HH:mm:ss')}`);
+  } else {
+    localLog.info('lastUpdate: none');
+  }
+  const tooEarly = moment().isBefore(updateTime);
+  const alreadyUpdated = lastUpdate && lastUpdate.isAfter(updateTime);
+  if (lastUpdate && (tooEarly || alreadyUpdated)) {
+    localLog.info('No need for update.');
+    return false;
+  }
+  localLog.info('Need update!');
+  return true;
+}
+
+/**
+ *
+ * @param {Timetable} timetable
+ * @returns {boolean}
+ */
+
+function getDevName(timetable) {
+  const year = moment().format('Y');
+  const month = moment().format('M');
+  const day = moment().format('D');
+  const {name} = timetable;
+  const localLog = bunyan.createLogger({name: `anechka:slack:${name}`});
+  const calendar = caches.timeTables[timeTableHash(timetable)];
+  const users = caches.users[userTimeTableHash(timetable)];
+
+  if (!calendar[year])
+  {
+    localLog.warn(`There is no timetable for year ${year}!`);
+    return false;
+  }
+  if (!calendar[year][month])
+  {
+    localLog.warn(`There is no timetable for month ${month}!`);
+    return false;
+  }
+  if (!calendar[year][month][day])
+  {
+    localLog.warn(`There is no timetable for day ${day}!`);
+    return false;
+  }
+  const currentDevName = calendar[year][month][day];
+  if (!currentDevName)
+  {
+    localLog.info(`User not found for ${day}.${month}.${year}, holiday?`);
+    return true;
+  }
+
+  const currentDevSlackName = users[currentDevName];
+  if (!currentDevSlackName)
+  {
+    localLog.warn(`User not found for name ${currentDevName}`);
+    return false;
+  }
+  return currentDevSlackName;
+}
+
+async function updateChannelTopic(channelId, newTopic)
+{
+  const {name} = config.timetables.find(timetable=>timetable.group === channelId);
+  const localLog = bunyan.createLogger({name: `anechka:slack:${name}`});
+  const group = config.timetables.some(timetable=>timetable.group === channelId) && channelId;
+  const channel = config.timetables.some(timetable=>timetable.channel === channelId) && channelId;
+  if (!group && !channel)
+  {
+    localLog.warn(`${channelId} is neither group or channel, check config!`);
+  }
   let response;
   if (group)
   {
@@ -107,93 +208,34 @@ async function updateSlackUserName(options) {
       topic: newTopic,
     });
   }
-  return response && response.ok === true;
-}
-
-async function updateSlackTimetable(timetable) {
-  const year = moment().format('Y');
-  const month = moment().format('M');
-  const day = moment().format('D');
-  const {name} = timetable;
-  const localLog = bunyan.createLogger({name: `anechka:slack:${name}`});
-  const calendar = timeTableCache[timeTableHash(timetable)];
-  const users = userCache[userTimeTableHash(timetable)];
-  if (!calendar) {
-    localLog.warn(`No calendar data for timetable ${JSON.stringify(timetable, null, 3)}`);
-    return false;
-  }
-  if (!users) {
-    localLog.warn(`No calendar data for timetable ${JSON.stringify(timetable, null, 3)}`);
-    return false;
-  }
-  const updateTime = moment(moment().format(`YYYY-MM-DD ${timetable.updateTime}`), 'YYYY-MM-DD HH:mm:ss');
-  localLog.info(`Update  time: ${updateTime.format('YYYY-MM-DD HH:mm:ss')}`);
-  localLog.info(`Current time: ${moment().format('YYYY-MM-DD HH:mm:ss')}`);
-  const {lastUpdate} = timetable;
-  if (lastUpdate) {
-    localLog.info(`lastUpdate: ${lastUpdate.format('YYYY-MM-DD HH:mm:ss')}`);
-  }
-  else {
-    localLog.info('lastUpdate: none');
-  }
-  const tooEarly = moment().isBefore(updateTime);
-  const alreadyUpdated = lastUpdate && lastUpdate.isAfter(updateTime);
-  if (lastUpdate && (tooEarly || alreadyUpdated)) {
-    localLog.info('No need for update.');
-    return false;
-  }
-  localLog.info('Need update!');
-
-  let timetableNotFound = false;
-  if (!calendar[year])
-  {
-    localLog.warn(`There is no timetable for year ${year}!`);
-    timetableNotFound = true;
-  }
-  else if (!calendar[year][month])
-  {
-    localLog.warn(`There is no timetable for month ${month}!`);
-    timetableNotFound = true;
-  }
-  else if (!calendar[year][month][day])
-  {
-    localLog.warn(`There is no timetable for day ${day}!`);
-    timetableNotFound = true;
-  }
-  if (timetableNotFound)
-  {
-    timetable.lastUpdate = moment();
-    return true;
-  }
-  const currentDevName = calendar[year][month][day];
-
-  const currentDevSlackName = users[currentDevName];
-  if (!currentDevSlackName)
-  {
-    localLog.warn(`User not found for name ${currentDevName}`);
-    timetable.lastUpdate = moment();
-    return true;
-  }
-  try {
-    const options = {
-      timetable,
-      devName: currentDevSlackName,
-    };
-    const res = await updateSlackUserName(options);
-    if (res) {
-      timetable.lastUpdate = moment();
-    }
-    return res;
-  }
-  catch (err) {
-    localLog.error(`Failed to set current dev for channel ${timetable.group}${timetable.channel}: ${err}`);
-  }
-  localLog.info('Updated.');
-  return true;
+  const updated = response && response.ok === true;
+  localLog.info(`${channelId} updated to ${newTopic}: ${updated}`);
 }
 
 async function updateSlack() {
-  return Promise.map(config.timetables, timetable=>updateSlackTimetable(timetable), {concurrency: 1});
+  await Promise.map(config.timetables, (timetable)=> {
+    if (shouldUpdate(timetable))
+    {
+      const devName = getDevName(timetable);
+      if (devName && devName !== true)
+      {
+        return updateSlackTopicCacheData(timetable, devName);
+      }
+    }
+    return true;
+  }, {concurrency: 1});
+  const updateTopics = Object.entries(caches.slackTopic);
+  if (!updateTopics.length)
+  {
+    log.info('No caches to update');
+    return false;
+  }
+  const res =  Promise.map(updateTopics, async ([channelId, newTopic])=>updateChannelTopic(channelId, newTopic), {concurrency: 1});
+  config.timetables.forEach((timetable)=>{
+    timetable.lastUpdate = moment();
+  });
+  caches.slackTopic = {};
+  return res;
 }
 
 module.exports = {

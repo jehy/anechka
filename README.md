@@ -61,7 +61,7 @@ There tou have timetable itself, in format like:
 
 Please note that month number is required but month title is not neccessary.
 
-Monthes and particular dates (for raxample holidays) can be skipped - then
+Months and particular dates (for example holidays) can be skipped - then
 bot just does nothing.
 
 ### Users

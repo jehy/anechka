@@ -19,10 +19,7 @@ const {
   userTimeTableHash,
 } = require('./utils');
 
-const {
-  timeTableCache,
-  userCache,
-} = require('./caches');
+const caches = require('./caches');
 
 // eslint-disable-next-line camelcase
 const {client_secret, client_id, redirect_uris} = credentials.installed;
@@ -48,8 +45,8 @@ async function updateTimetableData(timetable)
     spreadsheetId,
   } = timetable;
   const localLog = bunyan.createLogger({name: `anechka:sheets:${name}`});
-  if (!timeTableCache[hash]) {
-    timeTableCache[hash] = {};
+  if (!caches.timeTables[hash]) {
+    caches.timeTables[hash] = {};
   }
   let rows;
   try {
@@ -76,18 +73,18 @@ async function updateTimetableData(timetable)
       if (!row || !devColumn[index]) {
         return;
       }
-      timeTableCache[hash][year] = timeTableCache[hash][year] || {};
-      timeTableCache[hash][year][realMonth] = timeTableCache[hash][year][realMonth] || {};
-      timeTableCache[hash][year][realMonth][row] = devColumn[index];
+      caches.timeTables[hash][year] = caches.timeTables[hash][year] || {};
+      caches.timeTables[hash][year][realMonth] = caches.timeTables[hash][year][realMonth] || {};
+      caches.timeTables[hash][year][realMonth][row] = devColumn[index];
     });
   }
   // debug('Cached timetable: ', `${JSON.stringify(timeTableCache, null, 3)}`);
-  await fs.writeJson('./current/timetable.json', timeTableCache, {spaces: 3});
+  await fs.writeJson('./current/timetable.json', caches.timeTables, {spaces: 3});
   return true;
 }
 
 async function updateTimeTables() {
-  if (timeTableCache.lastUpdate && timeTableCache.lastUpdate.isAfter(moment().subtract('30', 'minutes'))) {
+  if (caches.timeTables.lastUpdate && caches.timeTables.lastUpdate.isAfter(moment().subtract('30', 'minutes'))) {
     return true;
   }
   log.info('updating timetables');
@@ -101,7 +98,7 @@ async function updateTimeTables() {
   const results = await Promise.map(uniqueTimeTables, timetable => updateTimetableData(timetable), {concurrency: 2});
   const success = results.every(el => el);
   if (success) {
-    timeTableCache.lastUpdate = moment();
+    caches.timeTables.lastUpdate = moment();
   }
   log.info(`timetables updated: ${success}`);
   return success;
@@ -115,8 +112,8 @@ async function updateTimetableUsers(timetable)
     spreadsheetId,
   } = timetable;
   const localLog = bunyan.createLogger({name: `anechka:sheets:${name}`});
-  if (!userCache[hash]) {
-    userCache[hash] = {};
+  if (!caches.users[hash]) {
+    caches.users[hash] = {};
   }
   let rows;
   try {
@@ -139,15 +136,15 @@ async function updateTimetableUsers(timetable)
     if (!user || !slackName) {
       break;
     }
-    userCache[hash][user] = slackName;
+    caches.users[hash][user] = slackName;
   }
   // debug('Cached users: ', `${JSON.stringify(userCache, null, 3)}`);
-  await fs.writeJson('./current/users.json', userCache, {spaces: 3});
+  await fs.writeJson('./current/users.json', caches.users, {spaces: 3});
   return true;
 }
 
 async function updateUsers() {
-  if (userCache.lastUpdate && userCache.lastUpdate.isAfter(moment().subtract('30', 'minutes'))) {
+  if (caches.users.lastUpdate && caches.users.lastUpdate.isAfter(moment().subtract('30', 'minutes'))) {
     return true;
   }
   log.info('updating users');
@@ -161,7 +158,7 @@ async function updateUsers() {
   const results = await Promise.map(uniqueTimeTables, timetable => updateTimetableUsers(timetable), {concurrency: 2});
   const success = results.every(el => el);
   if (success) {
-    userCache.lastUpdate = moment();
+    caches.users.lastUpdate = moment();
   }
   log.info(`users updated: ${success}`);
   return success;
