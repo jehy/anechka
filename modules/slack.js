@@ -235,6 +235,9 @@ async function updateSlack() {
   if (!updateTopics.length)
   {
     log.info('No caches to update');
+    config.timetables.forEach((timetable)=>{
+      timetable.lastUpdate = moment();
+    });
     return false;
   }
   const res =  Promise.map(updateTopics, async ([channelId, newTopic])=>updateChannelTopic(channelId, newTopic), {concurrency: 1});
