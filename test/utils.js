@@ -16,6 +16,11 @@ class logMock
   {
     debug('INFO', args);
   }
+
+  static warn(...args)
+  {
+    debug('INFO', args);
+  }
 }
 
 

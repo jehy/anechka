@@ -6,6 +6,7 @@ const rewire = require('rewire');
 const config = require('config');
 const {assert} = require('chai');
 const Debug = require('debug');
+const sinon = require('sinon');
 
 const debug = Debug('anechka:test');
 Debug.enable('anechka:test');
@@ -15,17 +16,35 @@ const slack = rewire('../modules/slack');
 const mockData = require('./mockData/index');
 const {logMock, fsMock, testConfigTimetables} = require('./utils');
 
-const slackBotMock =  {
-  groups: {
-    setTopic: ()=>({ok: true}),
-  },
-  channels: {
-    setTopic: ()=>({ok: true}),
-  },
-  users: {
-    list: ()=>mockData.slack.users,
-  },
-};
+function getSlackBotMock({topicValue}) {
+  return {
+    groups: {
+      setTopic: () => ({ok: true}),
+      info: () => ({
+        ok: true,
+        group: {topic: {value: topicValue}},
+      }),
+    },
+    channels: {
+      setTopic: () => ({ok: true}),
+      info: () => ({
+        ok: true,
+        channel: {topic: {value: topicValue}},
+      }),
+    },
+    users: {
+      list: () => mockData.slack.users,
+    },
+  };
+}
+
+class bunyanMock
+{
+  static createLogger()
+  {
+    return logMock;
+  }
+}
 
 describe('slack module', ()=>{
   let revertSlackBot;
@@ -34,15 +53,27 @@ describe('slack module', ()=>{
   let revertCaches;
   let revertLogger;
   let revertBot;
-  const caches = {users: {}, timeTables: {}, slackUsers: {}};
+  let revertBunyan;
+  let clock;
+  const caches = {
+    users: mockData.spreadsheets.usersExpected,
+    timeTables: mockData.spreadsheets.timetableExpected,
+    slackUsers: {},
+    slackTopic: {},
+  };
   before(()=>{
     revertSlackBot = slack.__set__('initSlack', ()=>{});
     revertLogger = slack.__set__('log', logMock);
     config.timetables = testConfigTimetables;
     revertFs = slack.__set__('fs', fsMock);
+    revertFs = slack.__set__('fs', fsMock);
+    revertBunyan = slack.__set__('bunyan', bunyanMock);
     revertConfig = slack.__set__('config', {timetables: testConfigTimetables});
     revertCaches = slack.__set__('caches', caches);
+    const topicValue = 'The master is <@U02C2K9UR> and the slave is <@U02K307KL>';
+    const slackBotMock = getSlackBotMock({topicValue});
     revertBot = slack.__set__('slackBot', slackBotMock);
+    clock = sinon.useFakeTimers({ now: new Date(2019, 4, 1, 0, 0)});
   });
   after(()=>{
     revertSlackBot();
@@ -51,6 +82,8 @@ describe('slack module', ()=>{
     revertCaches();
     revertLogger();
     revertBot();
+    revertBunyan();
+    clock.restore();
   });
   it('should update slack users', async ()=>{
     const res = await slack.updateSlackUsers();
@@ -58,11 +91,9 @@ describe('slack module', ()=>{
     caches.slackUsers.lastUpdate = mockData.slack.usersExpected.lastUpdate; // to avoid messing with timestamps
     assert.deepEqual(caches.slackUsers, mockData.slack.usersExpected);
   });
-  xit('should update slack info', async ()=>{
+  it('should update slack info when everuthing is fine', async ()=>{
     const res = await slack.updateSlack();
-    assert.equal(res, true);
-    caches.timeTables.lastUpdate = mockData.spreadsheets.timetableExpected.lastUpdate; // to avoid messing with timestamps
-    assert.deepEqual(caches.timeTables, mockData.spreadsheets.timetableExpected);
+    assert.deepEqual(res, [true]);
   });
 
 });

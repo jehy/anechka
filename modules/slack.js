@@ -201,7 +201,7 @@ async function updateChannelTopic(channelId, newTopic)
   catch (err)
   {
     log.warn(`${channelId} is neither group or channel, check config!`);
-    return;
+    return false;
   }
   const localLog = bunyan.createLogger({name: `anechka:slack:${name}`});
   let response;
@@ -221,6 +221,7 @@ async function updateChannelTopic(channelId, newTopic)
   }
   const updated = response && response.ok === true;
   localLog.info(`${channelId} updated to ${newTopic}: ${updated}`);
+  return true;
 }
 
 async function updateSlack() {
