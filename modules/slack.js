@@ -15,8 +15,12 @@ const {
 } = require('./utils');
 const caches = require('./caches');
 
+let slackBot;
 
-const slackBot = new Slack({token: config.token});
+function initSlack()
+{
+  slackBot = new Slack({token: config.token});
+}
 
 async function updateSlackUsers() {
   if (caches.slackUsers.lastUpdate && caches.slackUsers.lastUpdate.isAfter(moment().subtract('1', 'hour')))
@@ -251,4 +255,5 @@ async function updateSlack() {
 module.exports = {
   updateSlackUsers,
   updateSlack,
+  initSlack,
 };

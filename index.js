@@ -4,8 +4,11 @@ const config = require('config');
 const bunyan = require('bunyan');
 const Promise = require('bluebird');
 
-const {updateTimeTables, updateUsers} = require('./modules/spreadsheets');
-const {updateSlackUsers, updateSlack} = require('./modules/slack');
+const {updateTimeTables, updateUsers, initSpreadSheets} = require('./modules/spreadsheets');
+const {updateSlackUsers, updateSlack, initSlack} = require('./modules/slack');
+
+initSpreadSheets();
+initSlack();
 
 const log = bunyan.createLogger({name: 'anechka:global'});
 
