@@ -1,6 +1,6 @@
 {
   "name": "anechka",
-  "version": "1.0.3",
+  "version": "2.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -9,32 +9,54 @@
     "test": "mocha --use_strict --exit",
     "lint": "eslint .",
     "check_coverage": "nyc check-coverage --lines 80 --functions 80 --branches 70",
-    "coverage": "nyc npm test"
+    "coverage": "nyc npm test",
+    "coveralls": "nyc report --reporter=text-lcov | coveralls"
   },
-  "author": "",
-  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:jehy/anechka.git"
+  },
+  "author": "Jehy <npm@jehy.ru>",
+  "license": "MIT",
   "dependencies": {
-    "bluebird": "^3.5.3",
+    "bluebird": "^3.5.4",
     "bunyan": "^1.8.12",
-    "config": "^3.0.1",
-    "fs-extra": "^7.0.1",
-    "googleapis": "^37.2.0",
+    "config": "^3.1.0",
+    "fs-extra": "^8.0.1",
+    "googleapis": "^40.0.0",
     "moment": "^2.24.0",
-    "slack": "^11.0.2"
+    "slack": "^11.0.2",
+    "stringify-clone": "^2.0.1"
   },
   "devDependencies": {
-    "eslint": "^5.15.1",
+    "chai": "^4.2.0",
+    "coveralls": "^3.0.3",
+    "debug": "^4.1.1",
+    "deep-freeze": "0.0.1",
+    "eslint": "^5.16.0",
     "eslint-config-airbnb-base": "^13.1.0",
     "eslint-loader": "^2.1.2",
-    "eslint-plugin-import": "^2.16.0",
-    "eslint-plugin-promise": "^4.0.1",
+    "eslint-plugin-import": "^2.17.2",
+    "eslint-plugin-promise": "^4.1.1",
     "eslint-plugin-standard": "^4.0.0",
-    "mocha": "^6.0.2",
-    "chai": "^4.2.0",
-    "nyc": "^13.3.0"
+    "husky": "^2.3.0",
+    "lint-staged": "^8.1.7",
+    "mocha": "^6.1.4",
+    "nyc": "^14.1.1",
+    "rewire": "^4.0.1",
+    "sinon": "^7.3.2"
   },
   "engines": {
     "node": ">=8"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "pre-push": "npm test"
+    }
+  },
+  "lint-staged": {
+    "*.js": "eslint"
   },
   "engineStrict": true
 }

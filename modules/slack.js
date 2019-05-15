@@ -6,8 +6,7 @@ const Promise = require('bluebird');
 const Slack = require('slack');
 const fs = require('fs-extra');
 const bunyan = require('bunyan');
-
-const log = bunyan.createLogger({name: 'anechka:slack'});
+const clone = require('stringify-clone');
 
 const {
   timeTableHash,
@@ -15,8 +14,44 @@ const {
 } = require('./utils');
 const caches = require('./caches');
 
+let slackBot;
+let init;
+let log;
 
-const slackBot = new Slack({token: config.token});
+async function notifyAdmin(text)
+{
+  const channel = config.admin;
+  if (!channel)
+  {
+    log.warn('Failed to post message to admin, admin login not set');
+    return;
+  }
+  try {
+    await slackBot.chat.postMessage({
+      text,
+      channel,
+      as_user: true,
+    });
+  }
+  catch (err)
+  {
+    log.error('Failed to post message to admin', err);
+  }
+}
+
+function initSlack()
+{
+  if (init)
+  {
+    return;
+  }
+  log = bunyan.createLogger({name: 'anechka:slack'});
+  slackBot = new Slack({token: config.token});
+  caches.tasks = clone(config.tasks);
+  notifyAdmin('Anechka started');
+  init = true;
+}
+
 
 async function updateSlackUsers() {
   if (caches.slackUsers.lastUpdate && caches.slackUsers.lastUpdate.isAfter(moment().subtract('1', 'hour')))
@@ -86,16 +121,22 @@ async function updateSlackTopicCacheData(timetable, devName) {
   const foundUsers = topic.match(findUsers);
   localLog.info(`Found users: ${foundUsers}`);
   if (!foundUsers) {
-    localLog.warn('users not found in topic!');
+    const warning = `users not found in topic "${topic}" for task "${name}"`;
+    localLog.warn(warning);
+    notifyAdmin(warning);
     return false;
   }
   if (!foundUsers[devIndex]) {
-    localLog.warn(`user with index ${devIndex} not found in topic!`);
+    const warning = `user with index "${devIndex}" not found in topic "${topic}" for task "${name}"!`;
+    localLog.warn(warning);
+    notifyAdmin(warning);
     return false;
   }
   const devId = caches.slackUsers[devName];
   if (!devId) {
-    localLog.warn(`Developer ${devName} not found in cache!`);
+    const warning = `Developer "${devName}" not found in cache! for task "${name}"`;
+    localLog.warn(warning);
+    notifyAdmin(warning);
     return false;
   }
   const newTopic = topic.replace(foundUsers[devIndex], `<@${devId}>`);
@@ -154,30 +195,39 @@ function getDevName(timetable) {
 
   if (!calendar[year])
   {
-    localLog.warn(`There is no timetable for year ${year}!`);
+    const warning = `There is no timetable for year ${year} for task "${name}"`;
+    localLog.warn(warning);
+    notifyAdmin(warning);
     return false;
   }
   if (!calendar[year][month])
   {
-    localLog.warn(`There is no timetable for month ${month}!`);
+    const warning = `There is no timetable for month ${month} for task "${name}"`;
+    localLog.warn(warning);
+    notifyAdmin(warning);
     return false;
   }
   if (!calendar[year][month][day])
   {
-    localLog.warn(`There is no timetable for day ${day}!`);
+    const warning = `There is no timetable for day ${day} for task "${name}"`;
+    localLog.warn(warning);
+    // not sent to admin, because holidays are fine
     return false;
   }
   const currentDevName = calendar[year][month][day];
   if (!currentDevName)
   {
-    localLog.info(`User not found for ${day}.${month}.${year}, holiday?`);
+    const warning = `User not found for ${day}.${month}.${year}  for task "${name}", holiday?`;
+    localLog.info(warning);
     return true;
   }
 
   const currentDevSlackName = users[currentDevName];
   if (!currentDevSlackName)
   {
-    localLog.warn(`User not found for name ${currentDevName}`);
+    const warning = `User not found for name "${currentDevName}" for task "${name}"`;
+    localLog.warn(warning);
+    notifyAdmin(warning);
     return false;
   }
   return currentDevSlackName;
@@ -189,15 +239,17 @@ async function updateChannelTopic(channelId, newTopic)
   let group;
   let channel;
   try {
-    const found = config.timetables.find(timetable=>timetable.group === channelId || timetable.channel === channelId);
+    const found = caches.tasks.find(timetable=>timetable.group === channelId || timetable.channel === channelId);
     name = found.name;
     group = found.group;
     channel = found.channel;
   }
   catch (err)
   {
-    log.warn(`${channelId} is neither group or channel, check config!`);
-    return;
+    const warning = `"${channelId}" is neither group or channel, check config!`;
+    log.warn(warning);
+    notifyAdmin(warning);
+    return false;
   }
   const localLog = bunyan.createLogger({name: `anechka:slack:${name}`});
   let response;
@@ -217,10 +269,11 @@ async function updateChannelTopic(channelId, newTopic)
   }
   const updated = response && response.ok === true;
   localLog.info(`${channelId} updated to ${newTopic}: ${updated}`);
+  return true;
 }
 
 async function updateSlack() {
-  await Promise.map(config.timetables, (timetable)=> {
+  await Promise.map(caches.tasks, (timetable)=> {
     if (shouldUpdate(timetable))
     {
       const devName = getDevName(timetable);
@@ -235,20 +288,22 @@ async function updateSlack() {
   if (!updateTopics.length)
   {
     log.info('No caches to update');
-    config.timetables.forEach((timetable)=>{
+    caches.tasks.forEach((timetable)=>{
       timetable.lastUpdate = moment();
     });
     return false;
   }
   const res =  Promise.map(updateTopics, async ([channelId, newTopic])=>updateChannelTopic(channelId, newTopic), {concurrency: 1});
-  config.timetables.forEach((timetable)=>{
+  caches.tasks.forEach((timetable)=>{
     timetable.lastUpdate = moment();
   });
   caches.slackTopic = {};
+  await fs.writeJson('./current/tasks.json', caches.tasks, {spaces: 3});
   return res;
 }
 
 module.exports = {
   updateSlackUsers,
   updateSlack,
+  initSlack,
 };

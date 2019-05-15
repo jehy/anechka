@@ -1,0 +1,90 @@
+{
+  "ok": true,
+  "members": [
+    {
+      "id": "U02C2K9UR",
+      "team_id": "T025RJ98W",
+      "name": "ivan.ivanov",
+      "deleted": false,
+      "color": "8f4a2b",
+      "real_name": "Ivan Ivanov",
+      "tz": "Europe/Moscow",
+      "tz_label": "Moscow Time",
+      "tz_offset": 10800,
+      "profile": {
+      },
+      "is_admin": false,
+      "is_owner": false,
+      "is_primary_owner": false,
+      "is_restricted": false,
+      "is_ultra_restricted": false,
+      "is_bot": false,
+      "is_app_user": false,
+      "updated": 1557839190
+    },
+    {
+      "id": "U02K307KL",
+      "team_id": "T025RJ98W",
+      "name": "jane.redfield",
+      "deleted": false,
+      "color": "674b1b",
+      "real_name": "Jane Redfield",
+      "tz": "Europe/Moscow",
+      "tz_label": "Moscow Time",
+      "tz_offset": 10800,
+      "profile": {
+      },
+      "is_admin": false,
+      "is_owner": false,
+      "is_primary_owner": false,
+      "is_restricted": false,
+      "is_ultra_restricted": false,
+      "is_bot": false,
+      "is_app_user": false,
+      "updated": 1537859553
+    },
+    {
+      "id": "U18LQV66M",
+      "team_id": "T025RJ98W",
+      "name": "john.smith",
+      "deleted": false,
+      "color": "385a86",
+      "real_name": "John Smith",
+      "tz": "Europe/Moscow",
+      "tz_label": "Moscow Time",
+      "tz_offset": 10800,
+      "profile": {
+      },
+      "is_admin": false,
+      "is_owner": false,
+      "is_primary_owner": false,
+      "is_restricted": false,
+      "is_ultra_restricted": false,
+      "is_bot": false,
+      "is_app_user": false,
+      "updated": 1547280605
+    },
+    {
+      "id": "U6DGBPPL6",
+      "team_id": "T025RJ98W",
+      "name": "petr.petrov",
+      "deleted": false,
+      "color": "53b759",
+      "real_name": "Petr Petrov",
+      "tz": "Europe/Moscow",
+      "tz_label": "Moscow Time",
+      "tz_offset": 10800,
+      "profile": {
+      },
+      "is_admin": false,
+      "is_owner": false,
+      "is_primary_owner": false,
+      "is_restricted": false,
+      "is_ultra_restricted": false,
+      "is_bot": false,
+      "is_app_user": false,
+      "updated": 1555705850
+    }
+  ],
+  "cache_ts": 1557844444
+}

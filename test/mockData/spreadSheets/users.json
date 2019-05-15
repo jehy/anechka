@@ -1,0 +1,53 @@
+{
+  "config": {
+    "method": "GET",
+    "headers": {
+      "Accept-Encoding": "gzip",
+      "User-Agent": "google-api-nodejs-client/0.7.2 (gzip)",
+      "Accept": "application/json"
+    },
+    "params": {},
+    "responseType": "json"
+  },
+  "data": {
+    "range": "users!A1:V40",
+    "majorDimension": "ROWS",
+    "values": [
+      [
+        "Ivanov",
+        "ivan.ivanov"
+      ],
+      [
+        "Redfield",
+        "jane.redfield"
+      ],
+      [
+        "Smith",
+        "john.smith"
+      ],
+      [
+        "Petrov",
+        "petr.petrov"
+      ],
+      [
+        "Sidorov",
+        "sidor.sidorov"
+      ]
+    ]
+  },
+  "headers": {
+    "alt-svc": "quic=\":443\"; ma=2592000; v=\"46,44,43,39\"",
+    "cache-control": "private",
+    "connection": "close",
+    "content-encoding": "gzip",
+    "content-type": "application/json; charset=UTF-8",
+    "date": "Tue, 14 May 2019 11:16:32 GMT",
+    "server": "ESF",
+    "transfer-encoding": "chunked",
+    "vary": "Origin, X-Origin, Referer",
+    "x-frame-options": "SAMEORIGIN",
+    "x-xss-protection": "0"
+  },
+  "status": 200,
+  "statusText": "OK"
+}

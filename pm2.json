@@ -1,7 +1,7 @@
 {
   "apps": [
     {
-      "name": "dev-duty",
+      "name": "anechka",
       "script": "npm",
       "args": "start"
     }

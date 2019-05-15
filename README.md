@@ -1,5 +1,7 @@
 # Anechka
 
+[![Build Status](https://travis-ci.org/jehy/anechka.svg?branch=master)](https://travis-ci.org/jehy/anechka)
+[![Coverage Status](https://coveralls.io/repos/github/jehy/anechka/badge.svg?branch=master)](https://coveralls.io/github/jehy/anechka?branch=master)
 [![dependencies Status](https://david-dm.org/jehy/anechka/status.svg)](https://david-dm.org/jehy/anechka)
 [![devDependencies Status](https://david-dm.org/jehy/anechka/dev-status.svg)](https://david-dm.org/jehy/anechka?type=dev)
 [![Known Vulnerabilities](https://snyk.io/test/github/jehy/anechka/badge.svg)](https://snyk.io/test/github/jehy/anechka)
@@ -22,7 +24,7 @@ timetables for different groups and channels.
 Please copy it from `default.json`. It looks like this:
 ```json
 {
-  "timetables": [
+  "tasks": [
     {
       "spreadsheetId": "qwoeifh;wiorhfilrhgilrh",
       "prefix": "_dev",
@@ -41,7 +43,8 @@ Please copy it from `default.json`. It looks like this:
     }
   ],
   "token": "zzz",
-  "updateInterval": 10
+  "updateInterval": 10,
+  "admin": "U6DGBPXXX"
 }
 
 ```
@@ -49,8 +52,9 @@ Please copy it from `default.json`. It looks like this:
 ## Spreadsheet format
 
 ### Timetable
+
 Spreadsheet should have a sheet which is called `timetable_${prefix}${year}`.
-There tou have timetable itself, in format like:
+There you have timetable itself, in format like:
 
 | A |    B     | C |    D     |   |
 |---|----------|---|----------|---|
@@ -71,8 +75,8 @@ names from timetable to slack names, it looks like this:
 
 |     A    |          B             |
 |----------|------------------------|
-| devName1 | dev1FirstName.lastname |
-| devName2 | dev2FirstName.lastname |
+| devName1 | dev1SlackLogin         |
+| devName2 | dev2SlackLogin         |
 
 ## FAQ
 

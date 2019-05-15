@@ -6,12 +6,11 @@ const config = require('config');
 const Promise = require('bluebird');
 const fs = require('fs-extra');
 const bunyan = require('bunyan');
+const path = require('path');
 
 
-const log = bunyan.createLogger({name: 'anechka:spreadsheets'});
+let log;
 // Load client secrets from a local file.
-const credentials = require('../config/credentials.json');
-const token = require('../config/token.json');
 
 const {
   transpose,
@@ -21,18 +20,36 @@ const {
 
 const caches = require('./caches');
 
-// eslint-disable-next-line camelcase
-const {client_secret, client_id, redirect_uris} = credentials.installed;
-const oAuth2Client = new google.auth.OAuth2(
-  client_id, client_secret, redirect_uris[0],
-);
-oAuth2Client.setCredentials(token);
+let getSpreadSheet;
+let init;
 
-const sheets = google.sheets({
-  version: 'v4',
-  auth: oAuth2Client,
-});
-const getSpreadSheet = Promise.promisify(sheets.spreadsheets.values.get, {context: sheets});
+function initSpreadSheets() {
+  if (init)
+  {
+    return;
+  }
+  log = bunyan.createLogger({name: 'anechka:spreadsheets'});
+  let oAuth2Client;
+  try {
+    const credentials = fs.readJsonSync(path.join(__dirname, '../config/credentials.json'));
+    const token = fs.readJsonSync(path.join(__dirname, '../config/token.json'));
+    // eslint-disable-next-line camelcase
+    const {client_secret, client_id, redirect_uris} = credentials.installed;
+    oAuth2Client = new google.auth.OAuth2(
+      client_id, client_secret, redirect_uris[0],
+    );
+    oAuth2Client.setCredentials(token);
+  } catch (err) {
+    log.error('Failed to get oauth client', err);
+    throw err;
+  }
+  const sheets = google.sheets({
+    version: 'v4',
+    auth: oAuth2Client,
+  });
+  getSpreadSheet = Promise.promisify(sheets.spreadsheets.values.get, {context: sheets});
+  init = true;
+}
 
 
 async function updateTimetableData(timetable)
@@ -88,7 +105,7 @@ async function updateTimeTables() {
     return true;
   }
   log.info('updating timetables');
-  const uniqueTimeTables = config.timetables
+  const uniqueTimeTables = config.tasks
     .map((timetable) => {
       return Object.assign({}, timetable, {hash: timeTableHash(timetable)});
     })
@@ -148,7 +165,7 @@ async function updateUsers() {
     return true;
   }
   log.info('updating users');
-  const uniqueTimeTables = config.timetables
+  const uniqueTimeTables = config.tasks
     .map((timetable) => {
       return Object.assign({}, timetable, {hash: userTimeTableHash(timetable)});
     })
@@ -167,4 +184,5 @@ async function updateUsers() {
 module.exports = {
   updateUsers,
   updateTimeTables,
+  initSpreadSheets,
 };
