@@ -64,12 +64,12 @@ async function updateSlackUsers() {
     log.warn(`updateSlackUsers error, smth not okay: ${users}`);
     return false;
   }
-  users.members.forEach((user) => {
-    caches.slackUsers[user.name] = user.id;
-  });
+  caches.slackUsers = users.members
+    .filter(user=>!user.deleted)
+    .reduce((res, user) => { res[user.name] = user.id; return res; }, {});
   // debug(`SlackUserCache: ${JSON.stringify(slackUserCache, null, 3)}`);
-  await fs.writeJson('./current/slackUsers.json', caches.slackUsers, {spaces: 3});
   caches.slackUsers.lastUpdate = moment();
+  await fs.writeJson('./current/slackUsers.json', caches.slackUsers, {spaces: 3});
   log.info(`slack users updated: ${true}`);
   return true;
 }
