@@ -18,6 +18,7 @@ let slackBot;
 let init;
 let log;
 
+/* istanbul ignore next */
 async function notifyAdmin(text)
 {
   const channel = config.admin;
@@ -39,6 +40,7 @@ async function notifyAdmin(text)
   }
 }
 
+/* istanbul ignore next */
 function initSlack()
 {
   if (init)
@@ -158,13 +160,14 @@ async function updateSlackTopicCacheData(timetable, devName) {
  */
 
 function shouldUpdate(timetable) {
+  const dateTimeFormat = 'YYYY-MM-DD HH:mm:ss';
   const {name, lastUpdate} = timetable;
   const localLog = bunyan.createLogger({name: `anechka:slack:${name}`});
-  const updateTime = moment(moment().format(`YYYY-MM-DD ${timetable.updateTime}`), 'YYYY-MM-DD HH:mm:ss');
-  localLog.info(`Update  time: ${updateTime.format('YYYY-MM-DD HH:mm:ss')}`);
-  localLog.info(`Current time: ${moment().format('YYYY-MM-DD HH:mm:ss')}`);
+  const updateTime = moment(moment().format(`YYYY-MM-DD ${timetable.updateTime}`), dateTimeFormat);
+  localLog.info(`Update  time: ${updateTime.format(dateTimeFormat)}`);
+  localLog.info(`Current time: ${moment().format(dateTimeFormat)}`);
   if (lastUpdate) {
-    localLog.info(`lastUpdate: ${lastUpdate.format('YYYY-MM-DD HH:mm:ss')}`);
+    localLog.info(`lastUpdate: ${lastUpdate.format(dateTimeFormat)}`);
   } else {
     localLog.info('lastUpdate: none');
   }

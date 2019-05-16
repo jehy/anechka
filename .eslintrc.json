@@ -11,11 +11,12 @@
     "node": true,
     "mocha": true
   },
-  "extends": "airbnb-base",
+  "extends": ["plugin:sonarjs/recommended", "airbnb-base"],
   "plugins": [
-    "standard"
+    "standard", "sonarjs"
   ],
   "rules": {
+    "sonarjs/cognitive-complexity": ["error", 40],
     "strict": [
       "error",
       "global"

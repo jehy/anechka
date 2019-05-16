@@ -65,6 +65,8 @@ describe('slack module', ()=>{
   let clock;
   let revertConfig;
   let revertNotifyAdmin;
+  const topicForReplace = 'The master is <@U02C2K9UR> and the slave is <@U02K307KL>';
+
   before(()=>{
     revertSlackBot = slack.__set__('initSlack', ()=>{});
     revertNotifyAdmin = slack.__set__('notifyAdmin', notifyAdminMock);
@@ -89,8 +91,7 @@ describe('slack module', ()=>{
     let revertCaches;
     let caches;
     before(()=>{
-      const topicValue = 'The master is <@U02C2K9UR> and the slave is <@U02K307KL>';
-      const slackBotMock = getSlackBotMock({topicValue});
+      const slackBotMock = getSlackBotMock({topicValue: topicForReplace});
       revertBot = slack.__set__('slackBot', slackBotMock);
     });
     after(()=>{
@@ -111,6 +112,7 @@ describe('slack module', ()=>{
       assert.deepEqual(caches.slackUsers, mockData.slack.usersExpected);
     });
   });
+
   describe('updating slack topic', ()=>{
     describe('when topic changes', ()=>{
       let revertBot;
@@ -122,8 +124,7 @@ describe('slack module', ()=>{
         revertCaches();
       });
       before(()=>{
-        const topicValue = 'The master is <@U02C2K9UR> and the slave is <@U02K307KL>';
-        const slackBotMock = getSlackBotMock({topicValue});
+        const slackBotMock = getSlackBotMock({topicValue: topicForReplace});
         revertBot = slack.__set__('slackBot', slackBotMock);
 
       });
@@ -135,6 +136,7 @@ describe('slack module', ()=>{
         assert.deepEqual(res, [true]);
       });
     });
+
     describe('when topic stays same', ()=>{
       let revertBot;
       let revertCaches;
@@ -145,8 +147,8 @@ describe('slack module', ()=>{
         revertCaches();
       });
       before(()=>{
-        const topicValue = 'The master is <@U02C2K9UR> and the slave is <@U02C2K9UR>';
-        const slackBotMock = getSlackBotMock({topicValue});
+        const sameTopic = 'The master is <@U02C2K9UR> and the slave is <@U02C2K9UR>';
+        const slackBotMock = getSlackBotMock({topicValue: sameTopic});
         revertBot = slack.__set__('slackBot', slackBotMock);
 
       });
@@ -158,6 +160,7 @@ describe('slack module', ()=>{
         assert.deepEqual(res, false);
       });
     });
+
     describe('when topic has no developer links', ()=>{
       let revertBot;
       let revertCaches;
@@ -175,13 +178,42 @@ describe('slack module', ()=>{
       after(()=>{
         revertBot();
       });
-      it('should not update slack topic', async ()=>{
+      // eslint-disable-next-line sonarjs/no-duplicate-string
+      it('should not update slack topic, send warning', async ()=>{
         const res = await slack.updateSlack();
         assert.deepEqual(res, false);
         const lastWarning = adminWarnings[adminWarnings.length - 1];
         assert.equal(lastWarning, 'users not found in topic "No master, no slave, just freedom!" for task "test 1 channel update"');
       });
     });
+
+    describe('when topic has no developer link with needed position', ()=>{
+      let revertBot;
+      let revertCaches;
+      beforeEach(()=>{
+        revertCaches = slack.__set__('caches', clone(cachesDefault));
+      });
+      afterEach(()=>{
+        revertCaches();
+      });
+      before(()=>{
+        const topicValue = 'The master is <@U02C2K9UR> and the slave is NONE';
+        const slackBotMock = getSlackBotMock({topicValue});
+        revertBot = slack.__set__('slackBot', slackBotMock);
+      });
+      after(()=>{
+        revertBot();
+      });
+      // eslint-disable-next-line sonarjs/no-duplicate-string
+      it('should not update slack topic, send warning', async ()=>{
+        const res = await slack.updateSlack();
+        assert.deepEqual(res, false);
+        const lastWarning = adminWarnings[adminWarnings.length - 1];
+        assert.equal(lastWarning, 'user with index "1" not found in topic "The master is <@U02C2K9UR>'
+          + ' and the slave is NONE" for task "test 1 channel update"!');
+      });
+    });
+
     describe('when there is no timetable for this month', ()=>{
       let revertBot;
       let revertCaches;
@@ -194,20 +226,20 @@ describe('slack module', ()=>{
         revertCaches();
       });
       before(()=>{
-        const topicValue = 'The master is <@U02C2K9UR> and the slave is <@U6DGBPPL6>';
-        const slackBotMock = getSlackBotMock({topicValue});
+        const slackBotMock = getSlackBotMock({topicValue: topicForReplace});
         revertBot = slack.__set__('slackBot', slackBotMock);
       });
       after(()=>{
         revertBot();
       });
-      it('should not update slack topic', async ()=>{
+      it('should not update slack topic, send warning', async ()=>{
         const res = await slack.updateSlack();
         assert.deepEqual(res, false);
         const lastWarning = adminWarnings[adminWarnings.length - 1];
         assert.equal(lastWarning, 'There is no timetable for month 5 for task "test 1 channel update"');
       });
     });
+
     describe('when there is no such user in slack', ()=>{
       let revertBot;
       let revertCaches;
@@ -220,20 +252,20 @@ describe('slack module', ()=>{
         revertCaches();
       });
       before(()=>{
-        const topicValue = 'The master is <@U02C2K9UR> and the slave is <@U6DGBPPL6>';
-        const slackBotMock = getSlackBotMock({topicValue});
+        const slackBotMock = getSlackBotMock({topicValue: topicForReplace});
         revertBot = slack.__set__('slackBot', slackBotMock);
       });
       after(()=>{
         revertBot();
       });
-      it('should not update slack topic', async ()=>{
+      it('should not update slack topic, send warning', async ()=>{
         const res = await slack.updateSlack();
         assert.deepEqual(res, false);
         const lastWarning = adminWarnings[adminWarnings.length - 1];
         assert.equal(lastWarning, 'Developer "ivan.ivanov" not found in cache! for task "test 1 channel update"');
       });
     });
+
     describe('when there is no such user in timetable as in users sheet', ()=>{
       let revertBot;
       let revertCaches;
@@ -251,14 +283,13 @@ describe('slack module', ()=>{
         revertCaches();
       });
       before(()=>{
-        const topicValue = 'The master is <@U02C2K9UR> and the slave is <@U6DGBPPL6>';
-        const slackBotMock = getSlackBotMock({topicValue});
+        const slackBotMock = getSlackBotMock({topicValue: topicForReplace});
         revertBot = slack.__set__('slackBot', slackBotMock);
       });
       after(()=>{
         revertBot();
       });
-      it('should not update slack topic', async ()=>{
+      it('should not update slack topic, send warning', async ()=>{
         const res = await slack.updateSlack();
         assert.deepEqual(res, false);
         const lastWarning = adminWarnings[adminWarnings.length - 1];

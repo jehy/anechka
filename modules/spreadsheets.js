@@ -23,6 +23,7 @@ const caches = require('./caches');
 let getSpreadSheet;
 let init;
 
+/* istanbul ignore next */
 function initSpreadSheets() {
   if (init)
   {
