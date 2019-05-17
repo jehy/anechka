@@ -18,5 +18,6 @@
     }
   ],
   "token": "zzz",
-  "updateInterval": 10
+  "updateInterval": 10,
+  "admin": "john.smith"
 }

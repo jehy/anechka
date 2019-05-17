@@ -21,10 +21,15 @@ let log;
 /* istanbul ignore next */
 async function notifyAdmin(text)
 {
-  const channel = config.admin;
-  if (!channel)
+  if (!config.admin)
   {
     log.warn('Failed to post message to admin, admin login not set');
+    return;
+  }
+  const channel = caches.slackUsers[config.admin];
+  if (!channel)
+  {
+    log.warn(`Failed to post message to admin, name "${channel}" not found`);
     return;
   }
   try {
