@@ -4,8 +4,13 @@ const config = require('config');
 const bunyan = require('bunyan');
 const Promise = require('bluebird');
 
-const {updateTimeTables, updateUsers, initSpreadSheets} = require('./modules/spreadsheets');
-const {updateSlackUsers, updateSlack, initSlack} = require('./modules/slack');
+const {fetchTimeTables, fetchUsers, initSpreadSheets} = require('./modules/spreadsheets');
+const {
+  fetchSlackUsers,
+  updateSlack,
+  initSlack,
+  fetchSlackConversations,
+} = require('./modules/slack');
 
 initSpreadSheets();
 initSlack();
@@ -16,7 +21,7 @@ const updateInterval = 1000 * 60 * (config.updateInterval || 5);// from config o
 // const updateInterval = 1000 * 20;// every 60 second
 async function run() {
   try {
-    await Promise.all([updateTimeTables(), updateUsers(), updateSlackUsers()]);
+    await Promise.all([fetchTimeTables(), fetchUsers(), fetchSlackUsers(), fetchSlackConversations()]);
     return updateSlack();
   } catch (err)
   {

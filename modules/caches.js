@@ -4,6 +4,7 @@ const timeTables = {};
 const users = {};
 const slackUsers = {};
 const slackTopic = {};
+const conversations = {};
 const tasks = [];
 
 module.exports = {
@@ -12,4 +13,5 @@ module.exports = {
   slackUsers,
   slackTopic,
   tasks,
+  conversations,
 };

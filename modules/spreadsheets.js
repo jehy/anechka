@@ -53,7 +53,7 @@ function initSpreadSheets() {
 }
 
 
-async function updateTimetableData(timetable)
+async function fetchTimetableData(timetable)
 {
   const year = moment().format('Y');
   const {
@@ -101,7 +101,7 @@ async function updateTimetableData(timetable)
   return true;
 }
 
-async function updateTimeTables() {
+async function fetchTimeTables() {
   if (caches.timeTables.lastUpdate && caches.timeTables.lastUpdate.isAfter(moment().subtract('30', 'minutes'))) {
     return true;
   }
@@ -113,7 +113,7 @@ async function updateTimeTables() {
     .filter((el, index, arr) => {
       return arr.findIndex(item => item.hash === el.hash) === index;
     });
-  const results = await Promise.map(uniqueTimeTables, timetable => updateTimetableData(timetable), {concurrency: 2});
+  const results = await Promise.map(uniqueTimeTables, timetable => fetchTimetableData(timetable), {concurrency: 2});
   const success = results.every(el => el);
   if (success) {
     caches.timeTables.lastUpdate = moment();
@@ -122,7 +122,7 @@ async function updateTimeTables() {
   return success;
 }
 
-async function updateTimetableUsers(timetable)
+async function fetchTimetableUsers(timetable)
 {
   const {
     hash,
@@ -161,11 +161,11 @@ async function updateTimetableUsers(timetable)
   return true;
 }
 
-async function updateUsers() {
+async function fetchUsers() {
   if (caches.users.lastUpdate && caches.users.lastUpdate.isAfter(moment().subtract('30', 'minutes'))) {
     return true;
   }
-  log.info('updating users');
+  log.info('fetching users');
   const uniqueTimeTables = config.tasks
     .map((timetable) => {
       return Object.assign({}, timetable, {hash: userTimeTableHash(timetable)});
@@ -173,17 +173,17 @@ async function updateUsers() {
     .filter((el, index, arr) => {
       return arr.findIndex(item => item.hash === el.hash) === index;
     });
-  const results = await Promise.map(uniqueTimeTables, timetable => updateTimetableUsers(timetable), {concurrency: 2});
+  const results = await Promise.map(uniqueTimeTables, timetable => fetchTimetableUsers(timetable), {concurrency: 2});
   const success = results.every(el => el);
   if (success) {
     caches.users.lastUpdate = moment();
   }
-  log.info(`users updated: ${success}`);
+  log.info(`users fetched: ${success}`);
   return success;
 }
 
 module.exports = {
-  updateUsers,
-  updateTimeTables,
+  fetchUsers,
+  fetchTimeTables,
   initSpreadSheets,
 };

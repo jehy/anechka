@@ -17,6 +17,7 @@ const caches = require('./caches');
 let slackBot;
 let init;
 let log;
+let usersFetched = new Promise(()=>{});
 
 /* istanbul ignore next */
 async function notifyAdmin(text)
@@ -26,12 +27,8 @@ async function notifyAdmin(text)
     log.warn('Failed to post message to admin, admin login not set');
     return;
   }
+  await usersFetched;
   let channel = caches.slackUsers[config.admin];
-  if (!channel)
-  {
-    await Promise.delay(5000); // may be slack users were not fetched yet
-  }
-  channel = caches.slackUsers[config.admin];
   if (!channel)
   {
     log.warn(`Failed to post message to admin, name "${config.admin}" not found`);
@@ -64,25 +61,100 @@ function initSlack()
   init = true;
 }
 
+async function fetchSlackConversations()
+{
+  if (caches.conversations.lastUpdate && caches.conversations.lastUpdate.isAfter(moment().subtract('1', 'hour')))
+  {
+    return true;
+  }
+  log.info('fetching slack conversations');
+  const limit = 100;
+  const listOptions = {
+    exclude_archived: true,
+    types: 'public_channel,private_channel',
+    limit,
+  };
+  let reply = await slackBot.conversations.list(listOptions);
+  if (!reply.ok)
+  {
+    log.warn(`Failed to fetch conversions: ${JSON.stringify(reply)}`);
+    return false;
+  }
+  reply.channels.forEach((channel)=>{
+    caches.conversations[channel.name] = channel.id;
+  });
+  let cursor = reply.response_metadata && reply.response_metadata.next_cursor;
+  while (cursor)
+  {
+    log.info(`fetching more slack conversations... cursor ${cursor} (${Object.keys(caches.conversations).length} already)`);
+    // eslint-disable-next-line no-await-in-loop
+    await Promise.delay(3000);
+    listOptions.cursor = cursor;
+    // eslint-disable-next-line no-await-in-loop
+    reply = await slackBot.conversations.list(listOptions);
+    if (!reply.ok)
+    {
+      log.warn(`Failed to fetch conversions: ${JSON.stringify(reply)}`);
+      return false;
+    }
+    reply.channels.forEach((channel)=>{
+      caches.conversations[channel.name] = channel.id;
+    });
+    cursor = reply.response_metadata.next_cursor;
+  }
+  await fs.writeJson('./current/conversations.json', caches.conversations, {spaces: 3});
+  log.info(`fetched slack conversations (${Object.keys(caches.conversations).length})`);
+  caches.conversations.lastUpdate = moment();
+  return true;
+}
 
-async function updateSlackUsers() {
+async function fetchSlackUsers() {
   if (caches.slackUsers.lastUpdate && caches.slackUsers.lastUpdate.isAfter(moment().subtract('1', 'hour')))
   {
     return true;
   }
-  log.info('updating slack users');
-  const users = await slackBot.users.list();
-  if (!users.ok) {
-    log.warn(`updateSlackUsers error, smth not okay: ${users}`);
+  log.info('fetching slack users');
+  const limit = 100;
+  const listOptions = {
+    limit,
+  };
+  let reply = await slackBot.users.list(listOptions);
+  if (!reply.ok) {
+    log.warn(`updateSlackUsers error, smth not okay: ${reply}`);
     return false;
   }
-  caches.slackUsers = users.members
+  caches.slackUsers = reply.members
     .filter(user=>!user.deleted)
     .reduce((res, user) => { res[user.name] = user.id; return res; }, {});
+
+  let cursor = reply.response_metadata && reply.response_metadata.next_cursor;
+  while (cursor)
+  {
+    log.info(`fetching more slack users... cursor ${cursor} (${Object.keys(caches.slackUsers).length} already)`);
+    // eslint-disable-next-line no-await-in-loop
+    await Promise.delay(3000);
+    listOptions.cursor = cursor;
+    // eslint-disable-next-line no-await-in-loop
+    reply = await slackBot.users.list(listOptions);
+    if (!reply.ok)
+    {
+      log.warn(`Failed to fetch users: ${JSON.stringify(reply)}`);
+      return false;
+    }
+    reply.members.forEach((user)=>{
+      if (user.deleted)
+      {
+        return;
+      }
+      caches.slackUsers[user.name] = user.id;
+    });
+    cursor = reply.response_metadata.next_cursor;
+  }
   // debug(`SlackUserCache: ${JSON.stringify(slackUserCache, null, 3)}`);
   caches.slackUsers.lastUpdate = moment();
   await fs.writeJson('./current/slackUsers.json', caches.slackUsers, {spaces: 3});
-  log.info(`slack users updated: ${true}`);
+  log.info(`slack users fetched: ${true} (${Object.keys(caches.slackUsers).length})`);
+  usersFetched = Promise.resolve(true);
   return true;
 }
 
@@ -106,12 +178,20 @@ async function updateSlackTopicCacheData(timetable, devName) {
   const localLog = bunyan.createLogger({name: `anechka:slack:${name}`});
   const devIndex = timetable.devIndex || 0;
   let topic;
+  const channel = caches.conversations[conversation];
+  if (!channel)
+  {
+    const warning = `Can not find conversation with name ${conversation}`;
+    localLog.warn(warning);
+    notifyAdmin(warning);
+    return false;
+  }
   if (caches.slackTopic && caches.slackTopic[conversation])
   {
     topic = caches.slackTopic[conversation];
   }
   else {
-    const channelData = await slackBot.conversations.info({channel: conversation});
+    const channelData = await slackBot.conversations.info({channel});
     if (!channelData.ok) {
       localLog.warn(`updateSlackTopicCacheData error, smth not okay: ${channelData}`);
       return false;
@@ -236,30 +316,24 @@ function getDevName(timetable) {
   return currentDevSlackName;
 }
 
-async function updateChannelTopic(channelId, newTopic)
+async function updateChannelTopic(conversation, newTopic)
 {
-  let name;
-  let conversation;
-  try {
-    const found = caches.tasks.find(timetable=>timetable.conversation === channelId);
-    name = found.name;
-    conversation = found.conversation;
-  }
-  catch (err)
+  const channel = caches.conversations[conversation];
+  if (!channel)
   {
-    const warning = `"${channelId}" is neither group or channel, check config!`;
+    const warning = `Can not find conversation with name ${conversation}`;
     log.warn(warning);
     notifyAdmin(warning);
     return false;
   }
-  const localLog = bunyan.createLogger({name: `anechka:slack:${name}`});
+  const localLog = bunyan.createLogger({name: `anechka:slack:${conversation}`});
   const response = await slackBot.conversations.setTopic({
-    channel: conversation,
+    channel,
     topic: newTopic,
   });
 
   const updated = response && response.ok === true;
-  localLog.info(`${channelId} updated to ${newTopic}: ${updated}`);
+  localLog.info(`${channel} updated to ${newTopic}: ${updated}`);
   return true;
 }
 
@@ -284,7 +358,7 @@ async function updateSlack() {
     });
     return false;
   }
-  const res =  Promise.map(updateTopics, async ([channelId, newTopic])=>updateChannelTopic(channelId, newTopic), {concurrency: 1});
+  const res =  Promise.map(updateTopics, async ([conversation, newTopic])=>updateChannelTopic(conversation, newTopic), {concurrency: 1});
   caches.tasks.forEach((timetable)=>{
     timetable.lastUpdate = moment();
   });
@@ -294,7 +368,8 @@ async function updateSlack() {
 }
 
 module.exports = {
-  updateSlackUsers,
+  fetchSlackUsers,
   updateSlack,
   initSlack,
+  fetchSlackConversations,
 };

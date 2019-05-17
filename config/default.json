@@ -2,19 +2,19 @@
   "tasks": [
     {
       "spreadsheetId": "xxx",
-      "prefix": "_dev",
+      "prefix": "_jester",
       "updateTime": "17:54:30",
       "devIndex": 1,
-      "conversation": "GCC9TQ0JW",
-      "name": "dev update"
+      "conversation": "random",
+      "name": "jester on dity"
     },
     {
       "spreadsheetId": "yyy",
-      "prefix": "_ops",
+      "prefix": "",
       "updateTime": "17:54:30",
       "devIndex": 0,
-      "conversation": "GCDETR2CX",
-      "name": "ops update"
+      "conversation": "general",
+      "name": "generic on duty"
     }
   ],
   "token": "zzz",

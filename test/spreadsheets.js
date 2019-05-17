@@ -61,13 +61,13 @@ describe('spreadsheets module', ()=>{
     revertConfig();
   });
   it('should update users', async ()=>{
-    const res = await spreadsheets.updateUsers();
+    const res = await spreadsheets.fetchUsers();
     assert.equal(res, true);
     caches.users.lastUpdate = mockData.spreadsheets.usersExpected.lastUpdate; // to avoid messing with timestamps
     assert.deepEqual(caches.users, mockData.spreadsheets.usersExpected);
   });
   it('should update timetables', async ()=>{
-    const res = await spreadsheets.updateTimeTables();
+    const res = await spreadsheets.fetchTimeTables();
     assert.equal(res, true);
     caches.timeTables.lastUpdate = mockData.spreadsheets.timetableExpected.lastUpdate; // to avoid messing with timestamps
     assert.deepEqual(caches.timeTables, mockData.spreadsheets.timetableExpected);

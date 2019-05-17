@@ -41,6 +41,7 @@ const cachesDefault = {
   slackUsers: mockData.slack.usersExpected,
   slackTopic: {},
   tasks: testConfigTasks,
+  conversations: mockData.slack.conversationsExpected,
 };
 
 const adminWarnings = [];
@@ -99,7 +100,7 @@ describe('slack module', ()=>{
       revertCaches();
     });
     it('should update slack users', async ()=>{
-      const res = await slack.updateSlackUsers();
+      const res = await slack.fetchSlackUsers();
       assert.equal(res, true);
       caches.slackUsers.lastUpdate = mockData.slack.usersExpected.lastUpdate; // to avoid messing with timestamps
       assert.deepEqual(caches.slackUsers, mockData.slack.usersExpected);
