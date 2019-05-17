@@ -5,7 +5,7 @@
       "prefix": "_dev",
       "updateTime": "17:54:30",
       "devIndex": 1,
-      "group": "GCC9TQ0JW",
+      "conversation": "GCC9TQ0JW",
       "name": "dev update"
     },
     {
@@ -13,7 +13,7 @@
       "prefix": "_ops",
       "updateTime": "17:54:30",
       "devIndex": 0,
-      "group": "GCDETR2CX",
+      "conversation": "GCDETR2CX",
       "name": "ops update"
     }
   ],

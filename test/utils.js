@@ -37,7 +37,7 @@ const testConfigTasks = [
     prefix: '',
     updateTime: '17:54:30',
     devIndex: 1,
-    group: 'GCC9TQ0JW',
+    conversation: 'GCC9TQ0JW',
     name: 'test 1 channel update',
   },
 ];

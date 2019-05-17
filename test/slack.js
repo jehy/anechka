@@ -22,14 +22,7 @@ const {
 
 function getSlackBotMock({topicValue}) {
   return {
-    groups: {
-      setTopic: () => ({ok: true}),
-      info: () => ({
-        ok: true,
-        group: {topic: {value: topicValue}},
-      }),
-    },
-    channels: {
+    conversations: {
       setTopic: () => ({ok: true}),
       info: () => ({
         ok: true,

@@ -11,6 +11,7 @@ duty today and sets channel topic with his nick. You can have several
 timetables for different groups and channels.
 
 ## Requirements
+
 * slack bot cridentials
 * google api cridentials
 * spreadsheet in definite format (see below)
@@ -21,7 +22,9 @@ timetables for different groups and channels.
 * `credentials.json` - credentials from google
 * `token.json` - token from google which you get after auth
 * `runtime.json` - config which overrides `default.json`.
+
 Please copy it from `default.json`. It looks like this:
+
 ```json
 {
   "tasks": [
@@ -30,7 +33,7 @@ Please copy it from `default.json`. It looks like this:
       "prefix": "_dev",
       "updateTime": "17:54:30",
       "devIndex": 1,
-      "group": "GAC9TQ04W",
+      "conversation": "GAC9TQ04W",
       "name": "dev update"
     },
     {
@@ -38,7 +41,7 @@ Please copy it from `default.json`. It looks like this:
       "prefix": "_ops",
       "updateTime": "17:54:30",
       "devIndex": 0,
-      "group": "1CDATR2CX",
+      "conversation": "1CDATR2CX",
       "name": "ops update"
     }
   ],

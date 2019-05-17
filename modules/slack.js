@@ -26,10 +26,15 @@ async function notifyAdmin(text)
     log.warn('Failed to post message to admin, admin login not set');
     return;
   }
-  const channel = caches.slackUsers[config.admin];
+  let channel = caches.slackUsers[config.admin];
   if (!channel)
   {
-    log.warn(`Failed to post message to admin, name "${channel}" not found`);
+    await Promise.delay(5000); // may be slack users were not fetched yet
+  }
+  channel = caches.slackUsers[config.admin];
+  if (!channel)
+  {
+    log.warn(`Failed to post message to admin, name "${config.admin}" not found`);
     return;
   }
   try {
@@ -84,8 +89,7 @@ async function updateSlackUsers() {
 
 /**
  * @typedef {Object} Timetable
- * @property {string} group slack group from config
- * @property {string} channel slack channel from config
+ * @property {string} conversation slack group or channel from config
  * @property {string} name timetable name from config
  * @property {number} devIndex developer name order in slack topic
  * @property {Date} updateTime last time of update to slack
@@ -98,25 +102,16 @@ async function updateSlackUsers() {
  * @returns {Promise<boolean>}
  */
 async function updateSlackTopicCacheData(timetable, devName) {
-  const {group, channel, name} = timetable;
+  const {conversation, name} = timetable;
   const localLog = bunyan.createLogger({name: `anechka:slack:${name}`});
   const devIndex = timetable.devIndex || 0;
   let topic;
-  if (caches.slackTopic && caches.slackTopic[group || channel])
+  if (caches.slackTopic && caches.slackTopic[conversation])
   {
-    topic = caches.slackTopic[group || channel];
-  }
-  else if (group)
-  {
-    const channelData = await slackBot.groups.info({channel: group});
-    if (!channelData.ok) {
-      localLog.warn(`updateSlackTopicCacheData error, smth not okay: ${channelData}`);
-      return false;
-    }
-    topic = channelData.group.topic.value;
+    topic = caches.slackTopic[conversation];
   }
   else {
-    const channelData = await slackBot.channels.info({channel});
+    const channelData = await slackBot.conversations.info({channel: conversation});
     if (!channelData.ok) {
       localLog.warn(`updateSlackTopicCacheData error, smth not okay: ${channelData}`);
       return false;
@@ -152,7 +147,7 @@ async function updateSlackTopicCacheData(timetable, devName) {
     return true;
   }
   localLog.info(`Setting topic in cache to ${newTopic}`);
-  caches.slackTopic[group || channel] = newTopic;
+  caches.slackTopic[conversation] = newTopic;
   await fs.writeJson('./current/slackTopic.json', caches.slackTopic, {spaces: 3});
   return true;
 }
@@ -244,13 +239,11 @@ function getDevName(timetable) {
 async function updateChannelTopic(channelId, newTopic)
 {
   let name;
-  let group;
-  let channel;
+  let conversation;
   try {
-    const found = caches.tasks.find(timetable=>timetable.group === channelId || timetable.channel === channelId);
+    const found = caches.tasks.find(timetable=>timetable.conversation === channelId);
     name = found.name;
-    group = found.group;
-    channel = found.channel;
+    conversation = found.conversation;
   }
   catch (err)
   {
@@ -260,21 +253,11 @@ async function updateChannelTopic(channelId, newTopic)
     return false;
   }
   const localLog = bunyan.createLogger({name: `anechka:slack:${name}`});
-  let response;
-  if (group)
-  {
-    response = await slackBot.groups.setTopic({
-      channel: group,
-      topic: newTopic,
-    });
-  }
-  else
-  {
-    response = await slackBot.channels.setTopic({
-      channel,
-      topic: newTopic,
-    });
-  }
+  const response = await slackBot.conversations.setTopic({
+    channel: conversation,
+    topic: newTopic,
+  });
+
   const updated = response && response.ok === true;
   localLog.info(`${channelId} updated to ${newTopic}: ${updated}`);
   return true;
