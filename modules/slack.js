@@ -17,7 +17,9 @@ const caches = require('./caches');
 let slackBot;
 let init;
 let log;
-let usersFetched = new Promise(()=>{});
+
+let userFetchedResolve;
+let usersFetched = new Promise((resolve)=>{ userFetchedResolve = resolve; });
 
 /* istanbul ignore next */
 async function notifyAdmin(text)
@@ -154,7 +156,7 @@ async function fetchSlackUsers() {
   caches.slackUsers.lastUpdate = moment();
   await fs.writeJson('./current/slackUsers.json', caches.slackUsers, {spaces: 3});
   log.info(`slack users fetched: ${true} (${Object.keys(caches.slackUsers).length})`);
-  usersFetched = Promise.resolve(true);
+  userFetchedResolve();
   return true;
 }
 
