@@ -86,7 +86,7 @@ async function fetchSlackConversations()
   let cursor = reply.response_metadata && reply.response_metadata.next_cursor;
   while (cursor)
   {
-    log.info(`fetching more slack conversations... cursor ${cursor} (${Object.keys(caches.conversations).length} already)`);
+    log.info(`fetching more slack conversations... (${Object.keys(caches.conversations).length} already)`);
     // eslint-disable-next-line no-await-in-loop
     await Promise.delay(3000);
     listOptions.cursor = cursor;
@@ -130,7 +130,7 @@ async function fetchSlackUsers() {
   let cursor = reply.response_metadata && reply.response_metadata.next_cursor;
   while (cursor)
   {
-    log.info(`fetching more slack users... cursor ${cursor} (${Object.keys(caches.slackUsers).length} already)`);
+    log.info(`fetching more slack users... (${Object.keys(caches.slackUsers).length} already)`);
     // eslint-disable-next-line no-await-in-loop
     await Promise.delay(3000);
     listOptions.cursor = cursor;
