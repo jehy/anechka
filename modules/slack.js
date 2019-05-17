@@ -263,6 +263,11 @@ function shouldUpdate(timetable) {
   return true;
 }
 
+function isHoliday()
+{
+  const day = moment().isoWeekday();
+  return day === 6 || day === 7;
+}
 /**
  *
  * @param {Timetable} timetable
@@ -296,7 +301,10 @@ function getDevName(timetable) {
   {
     const warning = `There is no timetable for day ${day} for task "${name}"`;
     localLog.warn(warning);
-    // not sent to admin, because holidays are fine
+    if (!isHoliday())
+    {
+      notifyAdmin(warning);
+    }
     return false;
   }
   const currentDevName = calendar[year][month][day];
@@ -304,6 +312,10 @@ function getDevName(timetable) {
   {
     const warning = `User not found for ${day}.${month}.${year}  for task "${name}", holiday?`;
     localLog.info(warning);
+    if (!isHoliday())
+    {
+      notifyAdmin(warning);
+    }
     return true;
   }
 
