@@ -230,7 +230,7 @@ describe('slack module', ()=>{
         const res = await slack.updateSlack();
         assert.deepEqual(res, false);
         const lastWarning = adminWarnings[adminWarnings.length - 1];
-        assert.equal(lastWarning, 'There is no timetable for month 5 for task "test 1 channel update"');
+        assert.equal(lastWarning, 'There is no timetable for month 5 for task "test 1 channel update" on conversation #test1');
       });
     });
 
@@ -287,7 +287,7 @@ describe('slack module', ()=>{
         const res = await slack.updateSlack();
         assert.deepEqual(res, false);
         const lastWarning = adminWarnings[adminWarnings.length - 1];
-        assert.equal(lastWarning, 'User not found for name "Ivanov" for task "test 1 channel update"');
+        assert.equal(lastWarning, 'User not found for name "Ivanov" for task "test 1 channel update" on conversation #test1');
       });
     });
   });

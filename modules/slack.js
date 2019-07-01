@@ -278,28 +278,29 @@ function getDevName(timetable) {
   const year = moment().format('Y');
   const month = moment().format('M');
   const day = moment().format('D');
-  const {name} = timetable;
+  const {name, conversation} = timetable;
   const localLog = bunyan.createLogger({name: `anechka:slack:${name}`});
   const calendar = caches.timeTables[timeTableHash(timetable)];
   const users = caches.users[userTimeTableHash(timetable)];
+  const commonLogPart = `for task "${name}" on conversation #${conversation}`;
 
   if (!calendar[year])
   {
-    const warning = `There is no timetable for year ${year} for task "${name}"`;
+    const warning = `There is no timetable for year ${year} ${commonLogPart}`;
     localLog.warn(warning);
     notifyAdmin(warning);
     return false;
   }
   if (!calendar[year][month])
   {
-    const warning = `There is no timetable for month ${month} for task "${name}"`;
+    const warning = `There is no timetable for month ${month} ${commonLogPart}`;
     localLog.warn(warning);
     notifyAdmin(warning);
     return false;
   }
   if (!calendar[year][month][day])
   {
-    const warning = `There is no timetable for day ${day} for task "${name}"`;
+    const warning = `There is no timetable for day ${day} ${commonLogPart}`;
     localLog.warn(warning);
     if (!isHoliday())
     {
@@ -310,7 +311,7 @@ function getDevName(timetable) {
   const currentDevName = calendar[year][month][day];
   if (!currentDevName)
   {
-    const warning = `User not found for ${day}.${month}.${year}  for task "${name}", holiday?`;
+    const warning = `User not found for ${day}.${month}.${year} ${commonLogPart}, holiday?`;
     localLog.info(warning);
     if (!isHoliday())
     {
@@ -322,7 +323,7 @@ function getDevName(timetable) {
   const currentDevSlackName = users[currentDevName];
   if (!currentDevSlackName)
   {
-    const warning = `User not found for name "${currentDevName}" for task "${name}"`;
+    const warning = `User not found for name "${currentDevName}" ${commonLogPart}`;
     localLog.warn(warning);
     notifyAdmin(warning);
     return false;
