@@ -1,7 +1,7 @@
 'use strict';
 
 function transpose(a) {
-  return Object.keys(a[0]).map(c => a.map(r => r[c]));
+  return Object.keys(a[0]).map((c) => a.map((r) => r[c]));
 }
 
 function timeTableHash(timetable) {

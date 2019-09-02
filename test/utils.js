@@ -5,20 +5,16 @@ const Debug = require('debug');
 const debug = Debug('anechka:test');
 Debug.enable('anechka:test');
 
-class logMock
-{
-  static error(...args)
-  {
+class logMock {
+  static error(...args) {
     debug('ERROR', args);
   }
 
-  static info(...args)
-  {
+  static info(...args) {
     debug('INFO', args);
   }
 
-  static warn(...args)
-  {
+  static warn(...args) {
     debug('INFO', args);
   }
 }
@@ -43,10 +39,8 @@ const testConfigTasks = [
 ];
 
 
-class bunyanMock
-{
-  static createLogger()
-  {
+class bunyanMock {
+  static createLogger() {
     return logMock;
   }
 }

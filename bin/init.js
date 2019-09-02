@@ -19,7 +19,7 @@ async function ask(question) {
     output: process.stdout,
   });
   return new Promise((resolve) => {
-    rl.question(question, input => resolve(input));
+    rl.question(question, (input) => resolve(input));
   })
     .finally(()=> rl.close());
 }
@@ -63,8 +63,7 @@ async function authorize(credentials) {
   let token;
   try {
     token = await fs.readJson(TOKEN_PATH);
-  }
-  catch (err) {
+  } catch (err) {
     token = await getNewToken(oAuth2Client);
   }
   oAuth2Client.setCredentials(token);
@@ -76,8 +75,7 @@ async function init() {
   let content;
   try {
     content = await fs.readJson('config/credentials.json');
-  }
-  catch (err) {
+  } catch (err) {
     log.error('Error loading client secret file:', err);
     process.exit(1);
   }

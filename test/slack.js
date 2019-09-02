@@ -44,10 +44,9 @@ const cachesDefault = {
   conversations: mockData.slack.conversationsExpected,
 };
 
-const adminWarnings = [];
+let adminWarnings = [];
 
-function notifyAdminMock(text)
-{
+function notifyAdminMock(text) {
   adminWarnings.push(text);
 }
 
@@ -95,6 +94,7 @@ describe('slack module', ()=>{
       caches = clone(cachesDefault);
       caches.slackUsers = {};
       revertCaches = slack.__set__('caches', caches);
+      adminWarnings = [];
     });
     afterEach(()=>{
       revertCaches();
@@ -113,6 +113,7 @@ describe('slack module', ()=>{
       let revertCaches;
       beforeEach(()=>{
         revertCaches = slack.__set__('caches', clone(cachesDefault));
+        adminWarnings = [];
       });
       afterEach(()=>{
         revertCaches();
@@ -136,6 +137,7 @@ describe('slack module', ()=>{
       let revertCaches;
       beforeEach(()=>{
         revertCaches = slack.__set__('caches', clone(cachesDefault));
+        adminWarnings = [];
       });
       afterEach(()=>{
         revertCaches();
@@ -160,6 +162,7 @@ describe('slack module', ()=>{
       let revertCaches;
       beforeEach(()=>{
         revertCaches = slack.__set__('caches', clone(cachesDefault));
+        adminWarnings = [];
       });
       afterEach(()=>{
         revertCaches();
@@ -177,7 +180,8 @@ describe('slack module', ()=>{
         const res = await slack.updateSlack();
         assert.deepEqual(res, false);
         const lastWarning = adminWarnings[adminWarnings.length - 1];
-        assert.equal(lastWarning, 'users not found in topic "No master, no slave, just freedom!" for task "test 1 channel update"');
+        assert.equal(lastWarning, 'users not found in topic "No master, no slave, just freedom!" '
+          + 'for task "test 1 channel update" (No users notified)');
       });
     });
 
@@ -186,6 +190,7 @@ describe('slack module', ()=>{
       let revertCaches;
       beforeEach(()=>{
         revertCaches = slack.__set__('caches', clone(cachesDefault));
+        adminWarnings = [];
       });
       afterEach(()=>{
         revertCaches();
@@ -204,7 +209,7 @@ describe('slack module', ()=>{
         assert.deepEqual(res, false);
         const lastWarning = adminWarnings[adminWarnings.length - 1];
         assert.equal(lastWarning, 'user with index "1" not found in topic "The master is <@U02C2K9UR>'
-          + ' and the slave is NONE" for task "test 1 channel update"!');
+          + ' and the slave is NONE" for task "test 1 channel update"! (No users notified)');
       });
     });
 
@@ -215,6 +220,7 @@ describe('slack module', ()=>{
         const caches = clone(cachesDefault);
         caches.timeTables.id['2019']['5'] = undefined;
         revertCaches = slack.__set__('caches', caches);
+        adminWarnings = [];
       });
       afterEach(()=>{
         revertCaches();
@@ -230,7 +236,8 @@ describe('slack module', ()=>{
         const res = await slack.updateSlack();
         assert.deepEqual(res, false);
         const lastWarning = adminWarnings[adminWarnings.length - 1];
-        assert.equal(lastWarning, 'There is no timetable for month 5 for task "test 1 channel update" on conversation #test1');
+        assert.equal(lastWarning, 'There is no timetable for month 5 for task'
+          + ' "test 1 channel update" on conversation #test1 (No users notified)');
       });
     });
 
@@ -241,6 +248,7 @@ describe('slack module', ()=>{
         const caches = clone(cachesDefault);
         caches.slackUsers = {};
         revertCaches = slack.__set__('caches', caches);
+        adminWarnings = [];
       });
       afterEach(()=>{
         revertCaches();
@@ -256,7 +264,7 @@ describe('slack module', ()=>{
         const res = await slack.updateSlack();
         assert.deepEqual(res, false);
         const lastWarning = adminWarnings[adminWarnings.length - 1];
-        assert.equal(lastWarning, 'Developer "ivan.ivanov" not found in cache! for task "test 1 channel update"');
+        assert.equal(lastWarning, 'Developer "ivan.ivanov" not found in cache! for task "test 1 channel update" (No users notified)');
       });
     });
 
@@ -272,6 +280,7 @@ describe('slack module', ()=>{
           lastUpdate: '2019-05-14T11:39:32.110Z',
         };
         revertCaches = slack.__set__('caches', caches);
+        adminWarnings = [];
       });
       afterEach(()=>{
         revertCaches();
@@ -287,7 +296,8 @@ describe('slack module', ()=>{
         const res = await slack.updateSlack();
         assert.deepEqual(res, false);
         const lastWarning = adminWarnings[adminWarnings.length - 1];
-        assert.equal(lastWarning, 'User not found for name "Ivanov" for task "test 1 channel update" on conversation #test1');
+        assert.equal(lastWarning, 'User not found for name "Ivanov" for task'
+          + ' "test 1 channel update" on conversation #test1 (No users notified)');
       });
     });
   });

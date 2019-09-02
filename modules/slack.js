@@ -19,54 +19,88 @@ let init;
 let log;
 
 let userFetchedResolve;
-let usersFetched = new Promise((resolve)=>{ userFetchedResolve = resolve; });
+const usersFetched = new Promise((resolve)=>{ userFetchedResolve = resolve; });
+let userNotifyQueue = Promise.resolve();
 
 /* istanbul ignore next */
-async function notifyAdmin(text)
-{
-  if (!config.admin)
-  {
+async function postUserNotify(text, channel) {
+  userNotifyQueue = userNotifyQueue
+    .then(()=>Promise.delay(3000)) // avoid hitting slack user notify limit
+    .then(async ()=>{
+      await slackBot.chat.postMessage({
+        text,
+        channel,
+        as_user: true,
+      });
+    });
+  await userNotifyQueue;
+}
+
+/* istanbul ignore next */
+async function notifyAdmin(text) {
+
+  if (!config.admin) {
     log.warn('Failed to post message to admin, admin login not set');
     return;
   }
-  await usersFetched;
-  let channel = caches.slackUsers[config.admin];
-  if (!channel)
-  {
+  const channel = caches.slackUsers[config.admin];
+  if (!channel) {
     log.warn(`Failed to post message to admin, name "${config.admin}" not found`);
     return;
   }
-  try {
-    await slackBot.chat.postMessage({
-      text,
-      channel,
-      as_user: true,
-    });
+  await postUserNotify(text, channel);
+}
+
+/* istanbul ignore next */
+async function notifyUser(username, text) {
+  const channel = caches.slackUsers[username];
+  if (!channel) {
+    log.warn(`Failed to post message to user, name "${username}" not found`);
+    return;
   }
-  catch (err)
-  {
+  await postUserNotify(text, channel);
+}
+
+/* istanbul ignore next */
+async function notify(text, timetable) {
+  await usersFetched;
+  let timeTableAdmin;
+  if (timetable) {
+    const hash = userTimeTableHash(timetable);
+    timeTableAdmin = caches.users[hash].admin;
+  }
+  let userNotifyText = '(No users notified)';
+  if (timeTableAdmin) {
+    try {
+      await notifyUser(timeTableAdmin, text);
+      userNotifyText = `(${timeTableAdmin} notified)`;
+    } catch (err) {
+      const errMessage = `(Failed to post notify to user ${timeTableAdmin}, error ${err.toString()})`;
+      userNotifyText = errMessage;
+      log.error(errMessage);
+    }
+  }
+  try {
+    await notifyAdmin(`${text} ${userNotifyText}`);
+  } catch (err) {
     log.error('Failed to post message to admin', err);
   }
 }
 
 /* istanbul ignore next */
-function initSlack()
-{
-  if (init)
-  {
+async function initSlack() {
+  if (init) {
     return;
   }
   log = bunyan.createLogger({name: 'anechka:slack'});
   slackBot = new Slack({token: config.token});
   caches.tasks = clone(config.tasks);
-  notifyAdmin('Anechka started');
+  await notify('Anechka started');
   init = true;
 }
 
-async function fetchSlackConversations()
-{
-  if (caches.conversations.lastUpdate && caches.conversations.lastUpdate.isAfter(moment().subtract('1', 'hour')))
-  {
+async function fetchSlackConversations() {
+  if (caches.conversations.lastUpdate && caches.conversations.lastUpdate.isAfter(moment().subtract('1', 'hour'))) {
     return true;
   }
   log.info('fetching slack conversations');
@@ -77,8 +111,7 @@ async function fetchSlackConversations()
     limit,
   };
   let reply = await slackBot.conversations.list(listOptions);
-  if (!reply.ok)
-  {
+  if (!reply.ok) {
     log.warn(`Failed to fetch conversions: ${JSON.stringify(reply)}`);
     return false;
   }
@@ -86,16 +119,14 @@ async function fetchSlackConversations()
     caches.conversations[channel.name] = channel.id;
   });
   let cursor = reply.response_metadata && reply.response_metadata.next_cursor;
-  while (cursor)
-  {
+  while (cursor) {
     log.info(`fetching more slack conversations... (${Object.keys(caches.conversations).length} already)`);
     // eslint-disable-next-line no-await-in-loop
     await Promise.delay(3000);
     listOptions.cursor = cursor;
     // eslint-disable-next-line no-await-in-loop
     reply = await slackBot.conversations.list(listOptions);
-    if (!reply.ok)
-    {
+    if (!reply.ok) {
       log.warn(`Failed to fetch conversions: ${JSON.stringify(reply)}`);
       return false;
     }
@@ -111,8 +142,7 @@ async function fetchSlackConversations()
 }
 
 async function fetchSlackUsers() {
-  if (caches.slackUsers.lastUpdate && caches.slackUsers.lastUpdate.isAfter(moment().subtract('1', 'hour')))
-  {
+  if (caches.slackUsers.lastUpdate && caches.slackUsers.lastUpdate.isAfter(moment().subtract('1', 'hour'))) {
     return true;
   }
   log.info('fetching slack users');
@@ -126,26 +156,23 @@ async function fetchSlackUsers() {
     return false;
   }
   caches.slackUsers = reply.members
-    .filter(user=>!user.deleted)
+    .filter((user)=>!user.deleted)
     .reduce((res, user) => { res[user.name] = user.id; return res; }, {});
 
   let cursor = reply.response_metadata && reply.response_metadata.next_cursor;
-  while (cursor)
-  {
+  while (cursor) {
     log.info(`fetching more slack users... (${Object.keys(caches.slackUsers).length} already)`);
     // eslint-disable-next-line no-await-in-loop
     await Promise.delay(3000);
     listOptions.cursor = cursor;
     // eslint-disable-next-line no-await-in-loop
     reply = await slackBot.users.list(listOptions);
-    if (!reply.ok)
-    {
+    if (!reply.ok) {
       log.warn(`Failed to fetch users: ${JSON.stringify(reply)}`);
       return false;
     }
     reply.members.forEach((user)=>{
-      if (user.deleted)
-      {
+      if (user.deleted) {
         return;
       }
       caches.slackUsers[user.name] = user.id;
@@ -181,18 +208,15 @@ async function updateSlackTopicCacheData(timetable, devName) {
   const devIndex = timetable.devIndex || 0;
   let topic;
   const channel = caches.conversations[conversation];
-  if (!channel)
-  {
+  if (!channel) {
     const warning = `Can not find conversation with name ${conversation}`;
     localLog.warn(warning);
-    notifyAdmin(warning);
+    await notify(warning, timetable);
     return false;
   }
-  if (caches.slackTopic && caches.slackTopic[conversation])
-  {
+  if (caches.slackTopic && caches.slackTopic[conversation]) {
     topic = caches.slackTopic[conversation];
-  }
-  else {
+  } else {
     const channelData = await slackBot.conversations.info({channel});
     if (!channelData.ok) {
       localLog.warn(`updateSlackTopicCacheData error, smth not okay: ${channelData}`);
@@ -207,20 +231,20 @@ async function updateSlackTopicCacheData(timetable, devName) {
   if (!foundUsers) {
     const warning = `users not found in topic "${topic}" for task "${name}"`;
     localLog.warn(warning);
-    notifyAdmin(warning);
+    await notify(warning, timetable);
     return false;
   }
   if (!foundUsers[devIndex]) {
     const warning = `user with index "${devIndex}" not found in topic "${topic}" for task "${name}"!`;
     localLog.warn(warning);
-    notifyAdmin(warning);
+    await notify(warning, timetable);
     return false;
   }
   const devId = caches.slackUsers[devName];
   if (!devId) {
     const warning = `Developer "${devName}" not found in cache! for task "${name}"`;
     localLog.warn(warning);
-    notifyAdmin(warning);
+    await notify(warning, timetable);
     return false;
   }
   const newTopic = topic.replace(foundUsers[devIndex], `<@${devId}>`);
@@ -263,8 +287,7 @@ function shouldUpdate(timetable) {
   return true;
 }
 
-function isHoliday()
-{
+function isHoliday() {
   const day = moment().isoWeekday();
   return day === 6 || day === 7;
 }
@@ -274,7 +297,7 @@ function isHoliday()
  * @returns {boolean}
  */
 
-function getDevName(timetable) {
+async function getDevName(timetable) {
   const year = moment().format('Y');
   const month = moment().format('M');
   const day = moment().format('D');
@@ -284,61 +307,52 @@ function getDevName(timetable) {
   const users = caches.users[userTimeTableHash(timetable)];
   const commonLogPart = `for task "${name}" on conversation #${conversation}`;
 
-  if (!calendar[year])
-  {
+  if (!calendar[year]) {
     const warning = `There is no timetable for year ${year} ${commonLogPart}`;
     localLog.warn(warning);
-    notifyAdmin(warning);
+    await notify(warning, timetable);
     return false;
   }
-  if (!calendar[year][month])
-  {
+  if (!calendar[year][month]) {
     const warning = `There is no timetable for month ${month} ${commonLogPart}`;
     localLog.warn(warning);
-    notifyAdmin(warning);
+    await notify(warning, timetable);
     return false;
   }
-  if (!calendar[year][month][day])
-  {
+  if (!calendar[year][month][day]) {
     const warning = `There is no timetable for day ${day} ${commonLogPart}`;
     localLog.warn(warning);
-    if (!isHoliday())
-    {
-      notifyAdmin(warning);
+    if (!isHoliday()) {
+      await notify(warning, timetable);
     }
     return false;
   }
   const currentDevName = calendar[year][month][day];
-  if (!currentDevName)
-  {
+  if (!currentDevName) {
     const warning = `User not found for ${day}.${month}.${year} ${commonLogPart}, holiday?`;
     localLog.info(warning);
-    if (!isHoliday())
-    {
-      notifyAdmin(warning);
+    if (!isHoliday()) {
+      await notify(warning, timetable);
     }
     return true;
   }
 
   const currentDevSlackName = users[currentDevName];
-  if (!currentDevSlackName)
-  {
+  if (!currentDevSlackName) {
     const warning = `User not found for name "${currentDevName}" ${commonLogPart}`;
     localLog.warn(warning);
-    notifyAdmin(warning);
+    await notify(warning, timetable);
     return false;
   }
   return currentDevSlackName;
 }
 
-async function updateChannelTopic(conversation, newTopic)
-{
+async function updateChannelTopic(conversation, newTopic) {
   const channel = caches.conversations[conversation];
-  if (!channel)
-  {
+  if (!channel) {
     const warning = `Can not find conversation with name ${conversation}`;
     log.warn(warning);
-    notifyAdmin(warning);
+    await notify(warning);
     return false;
   }
   const localLog = bunyan.createLogger({name: `anechka:slack:${conversation}`});
@@ -353,20 +367,17 @@ async function updateChannelTopic(conversation, newTopic)
 }
 
 async function updateSlack() {
-  await Promise.map(caches.tasks, (timetable)=> {
-    if (shouldUpdate(timetable))
-    {
-      const devName = getDevName(timetable);
-      if (devName && devName !== true)
-      {
+  await Promise.map(caches.tasks, async (timetable)=> {
+    if (shouldUpdate(timetable)) {
+      const devName = await getDevName(timetable);
+      if (devName && devName !== true) {
         return updateSlackTopicCacheData(timetable, devName);
       }
     }
     return true;
   }, {concurrency: 1});
   const updateTopics = Object.entries(caches.slackTopic);
-  if (!updateTopics.length)
-  {
+  if (!updateTopics.length) {
     log.info('No caches to update');
     caches.tasks.forEach((timetable)=>{
       timetable.lastUpdate = moment();

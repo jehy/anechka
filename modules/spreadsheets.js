@@ -25,8 +25,7 @@ let init;
 
 /* istanbul ignore next */
 function initSpreadSheets() {
-  if (init)
-  {
+  if (init) {
     return;
   }
   log = bunyan.createLogger({name: 'anechka:spreadsheets'});
@@ -53,8 +52,7 @@ function initSpreadSheets() {
 }
 
 
-async function fetchTimetableData(timetable)
-{
+async function fetchTimetableData(timetable) {
   const year = moment().format('Y');
   const {
     hash,
@@ -73,8 +71,7 @@ async function fetchTimetableData(timetable)
       range: `timetable_${prefix}${year}!A1:Z33`,
     });
     rows = res.data.values;
-  }
-  catch (err) {
+  } catch (err) {
     localLog.warn(`The API returned an error for timetable ${JSON.stringify(timetable)}: ${err}`);
     throw err;
   }
@@ -108,13 +105,13 @@ async function fetchTimeTables() {
   log.info('updating timetables');
   const uniqueTimeTables = config.tasks
     .map((timetable) => {
-      return Object.assign({}, timetable, {hash: timeTableHash(timetable)});
+      return { ...timetable, hash: timeTableHash(timetable)};
     })
     .filter((el, index, arr) => {
-      return arr.findIndex(item => item.hash === el.hash) === index;
+      return arr.findIndex((item) => item.hash === el.hash) === index;
     });
-  const results = await Promise.map(uniqueTimeTables, timetable => fetchTimetableData(timetable), {concurrency: 2});
-  const success = results.every(el => el);
+  const results = await Promise.map(uniqueTimeTables, (timetable) => fetchTimetableData(timetable), {concurrency: 2});
+  const success = results.every((el) => el);
   if (success) {
     caches.timeTables.lastUpdate = moment();
   }
@@ -122,8 +119,7 @@ async function fetchTimeTables() {
   return success;
 }
 
-async function fetchTimetableUsers(timetable)
-{
+async function fetchTimetableUsers(timetable) {
   const {
     hash,
     name,
@@ -140,8 +136,7 @@ async function fetchTimetableUsers(timetable)
       range: 'users!A1:V40',
     });
     rows = res.data.values;
-  }
-  catch (err) {
+  } catch (err) {
     localLog.warn(`The API returned an error for timetable ${JSON.stringify(timetable)}: ${err}`);
     throw err;
   }
@@ -150,11 +145,14 @@ async function fetchTimetableUsers(timetable)
     return false;
   }
   for (let i = 0; i < rows.length; i++) {
-    const [user, slackName] = rows[i];
+    const [user, slackName, isAdmin] = rows[i];
     if (!user || !slackName) {
       break;
     }
     caches.users[hash][user] = slackName;
+    if (isAdmin && isAdmin.toLowerCase() === 'admin') {
+      caches.users[hash].admin = slackName;
+    }
   }
   // debug('Cached users: ', `${JSON.stringify(userCache, null, 3)}`);
   await fs.writeJson('./current/users.json', caches.users, {spaces: 3});
@@ -168,13 +166,13 @@ async function fetchUsers() {
   log.info('fetching users');
   const uniqueTimeTables = config.tasks
     .map((timetable) => {
-      return Object.assign({}, timetable, {hash: userTimeTableHash(timetable)});
+      return { ...timetable, hash: userTimeTableHash(timetable)};
     })
     .filter((el, index, arr) => {
-      return arr.findIndex(item => item.hash === el.hash) === index;
+      return arr.findIndex((item) => item.hash === el.hash) === index;
     });
-  const results = await Promise.map(uniqueTimeTables, timetable => fetchTimetableUsers(timetable), {concurrency: 2});
-  const success = results.every(el => el);
+  const results = await Promise.map(uniqueTimeTables, (timetable) => fetchTimetableUsers(timetable), {concurrency: 2});
+  const success = results.every((el) => el);
   if (success) {
     caches.users.lastUpdate = moment();
   }

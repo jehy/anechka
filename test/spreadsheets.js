@@ -19,15 +19,12 @@ const {
   testConfigTasks,
 } = require('./utils');
 
-async function getSpreadSheetMock({spreadsheetId, range})
-{
+async function getSpreadSheetMock({spreadsheetId, range}) {
   debug('returning mocked spreadsheet');
-  if (range.startsWith('timetable'))
-  {
+  if (range.startsWith('timetable')) {
     return mockData.spreadsheets.timetable;
   }
-  if (range.startsWith('users'))
-  {
+  if (range.startsWith('users')) {
     return mockData.spreadsheets.users;
   }
   throw new Error(`Unknown spreadsheet ${range}`);

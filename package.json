@@ -1,6 +1,6 @@
 {
   "name": "anechka",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -21,31 +21,32 @@
   "dependencies": {
     "bluebird": "3.5.5",
     "bunyan": "1.8.12",
-    "config": "3.1.0",
+    "config": "3.2.2",
     "fs-extra": "8.1.0",
-    "googleapis": "40.0.0",
+    "googleapis": "42.0.0",
     "moment": "2.24.0",
     "slack": "11.0.2",
     "stringify-clone": "2.0.1"
   },
   "devDependencies": {
     "chai": "4.2.0",
-    "coveralls": "3.0.4",
+    "coveralls": "3.0.6",
     "debug": "4.1.1",
     "deep-freeze": "0.0.1",
-    "eslint": "6.0.1",
-    "eslint-config-airbnb-base": "13.1.0",
-    "eslint-loader": "2.1.2",
-    "eslint-plugin-import": "2.18.0",
+    "eslint": "6.3.0",
+    "eslint-config-airbnb-base": "14.0.0",
+    "eslint-loader": "3.0.0",
+    "eslint-plugin-import": "2.18.2",
+    "eslint-plugin-node": "^9.2.0",
     "eslint-plugin-promise": "4.2.1",
     "eslint-plugin-sonarjs": "0.4.0",
-    "eslint-plugin-standard": "4.0.0",
-    "husky": "2.7.0",
-    "lint-staged": "8.2.1",
-    "mocha": "6.1.4",
+    "eslint-plugin-standard": "4.0.1",
+    "husky": "3.0.5",
+    "lint-staged": "9.2.5",
+    "mocha": "6.2.0",
     "nyc": "14.1.1",
     "rewire": "4.0.1",
-    "sinon": "7.3.2"
+    "sinon": "7.4.2"
   },
   "engines": {
     "node": ">=8"

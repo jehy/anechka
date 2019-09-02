@@ -23,8 +23,7 @@ async function run() {
   try {
     await Promise.all([fetchTimeTables(), fetchUsers(), fetchSlackUsers(), fetchSlackConversations()]);
     return updateSlack();
-  } catch (err)
-  {
+  } catch (err) {
     log.error(`ERR: ${err}`);
     return false;
   }
