@@ -6,14 +6,14 @@
 [![devDependencies Status](https://david-dm.org/jehy/anechka/dev-status.svg)](https://david-dm.org/jehy/anechka?type=dev)
 [![Known Vulnerabilities](https://snyk.io/test/github/jehy/anechka/badge.svg)](https://snyk.io/test/github/jehy/anechka)
 
-Anechka is a bot which looks up google spreadsheets, finds someone who is on
+`Anechka` is a bot which looks up google spreadsheets, finds someone who is on
 duty today and sets channel topic with his nick. You can have several
 timetables for different groups and channels.
 
 ## Requirements
 
-* slack bot cridentials
-* google api cridentials
+* slack bot credentials
+* google api credentials
 * spreadsheet in definite format (see below)
 
 
@@ -47,10 +47,15 @@ Please copy it from `default.json`. It looks like this:
   ],
   "token": "zzz",
   "updateInterval": 10,
-  "admin": "U6DGBPXXX"
+  "admin": "ivan.petrov"
 }
 
 ```
+
+`admin` is slack login of user which is used to send all kind of error reports.
+
+Slack data is updated every hour, and timetable data is updated every 30 minutes.
+It is hardcoded for now.
 
 ## Spreadsheet format
 
@@ -76,10 +81,12 @@ bot just does nothing.
 Also spreadsheet should have a sheet "users" which links
 names from timetable to slack names, it looks like this:
 
-|     A    |          B             |
-|----------|------------------------|
-| devName1 | dev1SlackLogin         |
-| devName2 | dev2SlackLogin         |
+|     A    |          B             |       C      |
+|----------|------------------------|--------------|
+| devName1 | dev1SlackLogin         |   admin      |
+| devName2 | dev2SlackLogin         |              |
+
+Value `admin` is third column is used to send error reports for this timetable's owner.
 
 ## FAQ
 
