@@ -83,10 +83,10 @@ names from timetable to slack names, it looks like this:
 
 |     A    |          B             |       C      |
 |----------|------------------------|--------------|
-| devName1 | dev1SlackLogin         |   admin      |
+| devName1 | dev1SlackLogin         |   owner      |
 | devName2 | dev2SlackLogin         |              |
 
-Value `admin` is third column is used to send error reports for this timetable's owner.
+Value `owner` is third column is used to send error reports for this timetable's owner.
 
 ## FAQ
 

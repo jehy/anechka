@@ -67,7 +67,7 @@ async function notify(text, timetable) {
   let timeTableAdmin;
   if (timetable) {
     const hash = userTimeTableHash(timetable);
-    timeTableAdmin = caches.users[hash].admin;
+    timeTableAdmin = caches.users[hash].owner;
   }
   let userNotifyText = '(No users notified)';
   if (timeTableAdmin) {

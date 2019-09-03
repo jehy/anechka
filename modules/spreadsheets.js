@@ -145,13 +145,13 @@ async function fetchTimetableUsers(timetable) {
     return false;
   }
   for (let i = 0; i < rows.length; i++) {
-    const [user, slackName, isAdmin] = rows[i];
+    const [user, slackName, isOwner] = rows[i];
     if (!user || !slackName) {
       break;
     }
     caches.users[hash][user] = slackName;
-    if (isAdmin && isAdmin.toLowerCase() === 'admin') {
-      caches.users[hash].admin = slackName;
+    if (isOwner && isOwner.toLowerCase() === 'owner') {
+      caches.users[hash].owner = slackName;
     }
   }
   // debug('Cached users: ', `${JSON.stringify(userCache, null, 3)}`);
