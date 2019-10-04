@@ -10,7 +10,9 @@
     "lint": "eslint .",
     "check_coverage": "nyc check-coverage --lines 80 --functions 80 --branches 70",
     "coverage": "nyc npm test",
-    "coveralls": "nyc report --reporter=text-lcov | coveralls"
+    "coveralls": "nyc report --reporter=text-lcov | coveralls",
+    "snyk-protect": "snyk protect",
+    "prepare": "npm run snyk-protect"
   },
   "repository": {
     "type": "git",
@@ -26,7 +28,8 @@
     "googleapis": "42.0.0",
     "moment": "2.24.0",
     "slack": "11.0.2",
-    "stringify-clone": "2.0.1"
+    "stringify-clone": "2.0.1",
+    "snyk": "^1.230.5"
   },
   "devDependencies": {
     "chai": "4.2.0",
@@ -60,5 +63,6 @@
   "lint-staged": {
     "*.js": "eslint"
   },
-  "engineStrict": true
+  "engineStrict": true,
+  "snyk": true
 }
