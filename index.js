@@ -31,7 +31,7 @@ async function run() {
 
 async function start() {
   await run();
-  setInterval(() => run(), updateInterval);
+  setTimeout(start, updateInterval);
 }
 
 start();
