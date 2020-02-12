@@ -5,6 +5,7 @@
 const rewire = require('rewire');
 const {assert} = require('chai');
 const Debug = require('debug');
+const sinon = require('sinon');
 
 const debug = Debug('anechka:test');
 Debug.enable('anechka:test');
@@ -39,6 +40,7 @@ describe('spreadsheets module', ()=>{
   let revertLog;
   let revertConfig;
   const caches = {users: {}, timeTables: {}};
+  let clock;
   before(()=>{
     revertGoogleSpreadSheets = spreadsheets.__set__('getSpreadSheet', getSpreadSheetMock);
     revertBunyan = spreadsheets.__set__('bunyan', bunyanMock);
@@ -47,6 +49,7 @@ describe('spreadsheets module', ()=>{
     revertInit = spreadsheets.__set__('initSpreadSheets', ()=>{});
     revertLog = spreadsheets.__set__('log', logMock);
     revertConfig = spreadsheets.__set__('config', {tasks: testConfigTasks});
+    clock = sinon.useFakeTimers(Date.parse('02 Jan 2019 00:00:00 GMT'));
   });
   after(()=>{
     revertGoogleSpreadSheets();
@@ -56,6 +59,7 @@ describe('spreadsheets module', ()=>{
     revertBunyan();
     revertLog();
     revertConfig();
+    clock.restore();
   });
   it('should update users', async ()=>{
     const res = await spreadsheets.fetchUsers();
