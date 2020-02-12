@@ -1,6 +1,6 @@
 # Anechka
 
-[![Build Status](https://travis-ci.org/jehy/anechka.svg?branch=master)](https://travis-ci.org/jehy/anechka)
+[![Build Status](https://travis-ci.com/jehy/anechka.svg?branch=master)](https://travis-ci.com/jehy/anechka)
 [![Coverage Status](https://coveralls.io/repos/github/jehy/anechka/badge.svg?branch=master)](https://coveralls.io/github/jehy/anechka?branch=master)
 [![dependencies Status](https://david-dm.org/jehy/anechka/status.svg)](https://david-dm.org/jehy/anechka)
 [![devDependencies Status](https://david-dm.org/jehy/anechka/dev-status.svg)](https://david-dm.org/jehy/anechka?type=dev)
