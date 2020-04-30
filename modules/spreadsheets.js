@@ -59,8 +59,13 @@ async function fetchTimetableData(timetable) {
     name,
     prefix,
     spreadsheetId,
+    disabled,
   } = timetable;
   const localLog = bunyan.createLogger({name: `anechka:sheets:${name}`});
+  if (disabled) {
+    localLog.info('timetable disabled');
+    return true;
+  }
   if (!caches.timeTables[hash]) {
     caches.timeTables[hash] = {};
   }
