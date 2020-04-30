@@ -266,9 +266,13 @@ async function updateSlackTopicCacheData(timetable, devName) {
  */
 
 function shouldUpdate(timetable) {
-  const dateTimeFormat = 'YYYY-MM-DD HH:mm:ss';
-  const {name, lastUpdate} = timetable;
+  const {name, lastUpdate, disabled} = timetable;
   const localLog = bunyan.createLogger({name: `anechka:slack:${name}`});
+  const dateTimeFormat = 'YYYY-MM-DD HH:mm:ss';
+  if (disabled) {
+    localLog.info('Timetable disabled.');
+    return false;
+  }
   const updateTime = moment(moment().format(`YYYY-MM-DD ${timetable.updateTime}`), dateTimeFormat);
   localLog.info(`Update  time: ${updateTime.format(dateTimeFormat)}`);
   localLog.info(`Current time: ${moment().format(dateTimeFormat)}`);
