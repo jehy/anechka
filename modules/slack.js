@@ -225,7 +225,7 @@ async function updateSlackTopicCacheData(timetable, devName) {
     topic = channelData.channel.topic.value;
   }
   localLog.info(`Current topic: ${topic}`);
-  const findUsers = /<@[A-Z0-9]+>/g;
+  const findUsers = /<@[A-Z0-11]+>/g;
   const foundUsers = topic.match(findUsers);
   localLog.info(`Found users: ${foundUsers}`);
   if (!foundUsers) {
