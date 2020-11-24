@@ -187,7 +187,6 @@ async function fetchSlackUsers() {
   return true;
 }
 
-
 /**
  * @typedef {Object} Timetable
  * @property {string} conversation slack group or channel from config
@@ -257,7 +256,6 @@ async function updateSlackTopicCacheData(timetable, devName) {
   await fs.writeJson('./current/slackTopic.json', caches.slackTopic, {spaces: 3});
   return true;
 }
-
 
 /**
  *

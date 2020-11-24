@@ -8,7 +8,6 @@ const fs = require('fs-extra');
 const bunyan = require('bunyan');
 const path = require('path');
 
-
 let log;
 // Load client secrets from a local file.
 
@@ -50,7 +49,6 @@ function initSpreadSheets() {
   getSpreadSheet = Promise.promisify(sheets.spreadsheets.values.get, {context: sheets});
   init = true;
 }
-
 
 async function fetchTimetableData(timetable) {
   const year = moment().format('Y');

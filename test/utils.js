@@ -19,13 +19,11 @@ class logMock {
   }
 }
 
-
 class fsMock {
   static writeJson(file, data, options) {
     debug(`mocked writing to file ${file}`);
   }
 }
-
 
 const testConfigTasks = [
   {
@@ -37,7 +35,6 @@ const testConfigTasks = [
     name: 'test 1 channel update',
   },
 ];
-
 
 class bunyanMock {
   static createLogger() {
